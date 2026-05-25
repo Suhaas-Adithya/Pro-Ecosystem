@@ -379,7 +379,17 @@ app.get('/api/browser/render', async (req, res) => {
   try {
     const response = await fetch(targetUrl);
     if (!response.ok) throw new Error(`Network response error: ${response.status}`);
-    const html = await response.text();
+    let html = await response.text();
+    
+    // Preprocess raw HTML to completely strip invisible blocks and comments.
+    // This avoids tag-stack scrambling from '<' symbols inside inline javascript and stylesheets.
+    html = html.replace(/<!--[\s\S]*?-->/g, ''); // Strip comments
+    html = html.replace(/<!doctype\b[^>]*>/gi, ''); // Strip doctype
+    html = html.replace(/<head\b[\s\S]*?<\/head>/gi, ''); // Strip head metadata block entirely
+    html = html.replace(/<script\b[\s\S]*?<\/script>/gi, ''); // Strip script blocks
+    html = html.replace(/<style\b[\s\S]*?<\/style>/gi, ''); // Strip style blocks
+    html = html.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, ''); // Strip noscript blocks
+    html = html.replace(/<iframe\b[\s\S]*?<\/iframe>/gi, ''); // Strip iframe blocks
     
     const dom = parseHTMLToDOM(html);
     const layout = compileDOMToLayout(dom, 800);
