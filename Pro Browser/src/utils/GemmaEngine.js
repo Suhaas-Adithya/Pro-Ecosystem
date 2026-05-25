@@ -271,9 +271,11 @@ export function compileDOMToLayout(dom, viewportWidth = 800) {
  * @param {Array<Object>} extensions Optional active extensions to execute onPaint lifecycle.
  */
 export function paintLayoutToCanvas(ctx, elements, extensions = []) {
+  if (!ctx || !elements || !Array.isArray(elements)) return;
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   
   elements.forEach((el) => {
+    if (!el) return;
     if (el.type === 'text') {
       ctx.font = `${el.isItalic ? 'italic ' : ''}${el.isBold ? '700 ' : '400 '}${el.fontSize}px 'Inter', sans-serif`;
       ctx.fillStyle = el.color;
