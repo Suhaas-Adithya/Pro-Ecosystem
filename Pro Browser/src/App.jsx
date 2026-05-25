@@ -11,8 +11,11 @@ import { io } from 'socket.io-client';
 import WelcomePortal from './components/WelcomePortal';
 import OpenSourceHub from './components/OpenSourceHub';
 import ExtensionStore from './components/ExtensionStore';
+import HomeDashboard from './components/HomeDashboard';
+import ThemeStore from './components/ThemeStore';
 import { ProDocs, ProSheets, ProSlides } from './components/DocsSheetSlides';
 import { paintLayoutToCanvas, resolveAnchorClick } from './utils/GemmaEngine';
+import { playKeyboardSound, playMouseSound, initAudioContext } from './utils/SynthAudio';
 
 const SOCKET_URL = 'http://localhost:3001';
 
@@ -21,16 +24,75 @@ export default function App() {
   const params = new URLSearchParams(window.location.search);
   const isAgentWindow = params.get('autopilot') === 'true';
 
-  // Tabs manager state
-  const [tabs, setTabs] = useState([
-    {
-      id: 'tab-1',
-      title: 'Welcome to Pro Suite ✦',
-      url: 'pro://welcome',
-      history: ['pro://welcome'],
-      historyIndex: 0
+  // ─── USER PROFILE & AUTHENTICATION STATE ───
+  const [userProfile, setUserProfile] = useState(() => {
+    const saved = localStorage.getItem('pro_user_profile');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
     }
-  ]);
+    return {
+      isSignedIn: false,
+      username: '',
+      email: '',
+      avatar: '🤖',
+      registeredAt: ''
+    };
+  });
+
+  // ─── DYNAMIC THEME SYSTEM STATE ───
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    const saved = localStorage.getItem('pro_current_theme');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      id: 'frosted-nebula',
+      name: '✦ Frosted Nebula (Default)',
+      bgPrimary: '#06070a',
+      bgSecondary: '#0c0d14',
+      bgTertiary: '#141622',
+      accentColor: 'hsl(271, 91%, 65%)',
+      accentHover: 'hsl(271, 91%, 72%)',
+      glassBg: 'rgba(20, 22, 34, 0.6)',
+      glassBorderGlow: 'rgba(139, 92, 246, 0.25)',
+      newTabWallpaper: 'radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15), transparent 75%), #06070a',
+      keyboardNoise: 'mechanical-switch',
+      mouseNoise: 'water-pop'
+    };
+  });
+
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
+  const [showAuthDrawer, setShowAuthDrawer] = useState(false);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginAvatar, setLoginAvatar] = useState('🤖');
+  const [loginPasskey, setLoginPasskey] = useState('');
+
+  // Tabs manager state
+  const [tabs, setTabs] = useState(() => {
+    const savedProfile = localStorage.getItem('pro_user_profile');
+    let isSignedIn = false;
+    if (savedProfile) {
+      try {
+        isSignedIn = JSON.parse(savedProfile).isSignedIn;
+      } catch (e) {}
+    }
+    const initialUrl = isSignedIn ? 'pro://home' : 'pro://welcome';
+    const initialTitle = isSignedIn ? 'Home Dashboard 🏠' : 'Welcome to Pro Suite ✦';
+    return [
+      {
+        id: 'tab-1',
+        title: initialTitle,
+        url: initialUrl,
+        history: [initialUrl],
+        historyIndex: 0
+      }
+    ];
+  });
   const [activeTabId, setActiveTabId] = useState('tab-1');
 
   // Extension management state
@@ -50,17 +112,36 @@ export default function App() {
   ]);
 
   // General States
-  const [bookmarks, setBookmarks] = useState([
-    { name: 'Welcome ✦', url: 'pro://welcome' },
-    { name: 'Engine Specs', url: 'pro://engine' },
-    { name: 'Extension Store', url: 'pro://store' },
-    { name: 'Agent Autopilot 🤖', url: 'pro://agent' },
-    { name: 'Pro Docs', url: 'pro://docs' },
-    { name: 'Pro Sheets', url: 'pro://sheets' },
-    { name: 'Pro Slides', url: 'pro://slides' },
-    { name: 'Pro Dev (ADE)', url: 'http://localhost:5176' }
-  ]);
-  const [addressInput, setAddressInput] = useState('pro://welcome');
+  const [bookmarks, setBookmarks] = useState(() => {
+    const savedProfile = localStorage.getItem('pro_user_profile');
+    let isSignedIn = false;
+    if (savedProfile) {
+      try {
+        isSignedIn = JSON.parse(savedProfile).isSignedIn;
+      } catch (e) {}
+    }
+    return [
+      { name: isSignedIn ? 'Home 🏠' : 'Welcome ✦', url: isSignedIn ? 'pro://home' : 'pro://welcome' },
+      { name: 'Theme Store 🎨', url: 'pro://themes' },
+      { name: 'Engine Specs', url: 'pro://engine' },
+      { name: 'Extension Store', url: 'pro://store' },
+      { name: 'Agent Autopilot 🤖', url: 'pro://agent' },
+      { name: 'Pro Docs', url: 'pro://docs' },
+      { name: 'Pro Sheets', url: 'pro://sheets' },
+      { name: 'Pro Slides', url: 'pro://slides' },
+      { name: 'Pro Dev (ADE)', url: 'http://localhost:5176' }
+    ];
+  });
+  const [addressInput, setAddressInput] = useState(() => {
+    const savedProfile = localStorage.getItem('pro_user_profile');
+    let isSignedIn = false;
+    if (savedProfile) {
+      try {
+        isSignedIn = JSON.parse(savedProfile).isSignedIn;
+      } catch (e) {}
+    }
+    return isSignedIn ? 'pro://home' : 'pro://welcome';
+  });
   const [isSecure, setIsSecure] = useState(true);
 
   // Gemma Engine Render States (Canvas Painted)
@@ -110,6 +191,52 @@ export default function App() {
   const animationFrameRef = useRef(null);
 
   const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
+
+  // Inject and sync dynamic theme CSS variables on the document root element
+  useEffect(() => {
+    if (currentTheme) {
+      const root = document.documentElement;
+      root.style.setProperty('--bg-primary', currentTheme.bgPrimary);
+      root.style.setProperty('--bg-secondary', currentTheme.bgSecondary);
+      root.style.setProperty('--bg-tertiary', currentTheme.bgTertiary);
+      root.style.setProperty('--accent-color', currentTheme.accentColor);
+      root.style.setProperty('--accent-hover', currentTheme.accentHover || currentTheme.accentColor);
+      root.style.setProperty('--glass-bg', currentTheme.glassBg);
+      root.style.setProperty('--glass-border-glow', currentTheme.glassBorderGlow);
+    }
+  }, [currentTheme]);
+
+  // Capture clicks and keypresses globally to trigger dynamic acoustic synthesizer feedback
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      // Play mouse noise if enabled
+      if (userProfile.isSignedIn && currentTheme.mouseNoise) {
+        if (e.target.closest('.audio-test-pad') || e.target.closest('.color-picker-input')) return;
+        initAudioContext();
+        playMouseSound(currentTheme.mouseNoise);
+      }
+    };
+
+    const handleGlobalKeydown = (e) => {
+      // If the user typed inside an input or editable field, play keyboard noise
+      if (userProfile.isSignedIn && currentTheme.keyboardNoise) {
+        if (e.target.closest('.audio-test-pad')) return;
+        const activeEl = document.activeElement;
+        const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+        if (isInput) {
+          initAudioContext();
+          playKeyboardSound(currentTheme.keyboardNoise);
+        }
+      }
+    };
+
+    window.addEventListener('click', handleGlobalClick);
+    window.addEventListener('keydown', handleGlobalKeydown);
+    return () => {
+      window.removeEventListener('click', handleGlobalClick);
+      window.removeEventListener('keydown', handleGlobalKeydown);
+    };
+  }, [userProfile.isSignedIn, currentTheme]);
 
   // Sync Address Bar Input with Tab switches
   useEffect(() => {
@@ -399,7 +526,7 @@ export default function App() {
   };
 
   // Tab Manager Operations
-  const handleAddNewTab = (customUrl = 'pro://welcome', customTitle = 'New Tab') => {
+  const handleAddNewTab = (customUrl = userProfile.isSignedIn ? 'pro://home' : 'pro://welcome', customTitle = 'New Tab') => {
     const nextTabId = `tab-${Date.now()}`;
     const newTab = {
       id: nextTabId,
@@ -703,10 +830,393 @@ export default function App() {
     }));
   };
 
+  if (!userProfile.isSignedIn) {
+    return (
+      <div className="pro-browser-onboarding-wrapper">
+        <div className="onboarding-welcome-panel glass-card animate-slide-up">
+          {/* Holographic Glowing Header */}
+          <div className="onboarding-header">
+            <span className="onboarding-logo animate-pulse">🛸</span>
+            <h2>PRO SUITE ECOSYSTEM</h2>
+            <span className="onboarding-version">v1.1.0 LTS</span>
+          </div>
+
+          <hr className="glass-hr" />
+
+          {/* Onboarding Welcome Note */}
+          <div className="onboarding-note-section">
+            <h3>Greetings, Innovator ✦</h3>
+            <p>
+              Welcome to the future of completely sovereign workspace productivity. Pro Browser is built 100% independent of Chromium/WebKit engines on high-performance vector canvas rendering. estudio localized databases, deploy P2P conferencing channels, and engage autonomous Gemma 4 autopilot agents from a unified secure workspace.
+            </p>
+          </div>
+
+          {/* Glowing Action Buttons Row */}
+          <div className="onboarding-actions-row">
+            <button 
+              className="btn btn-primary onboarding-btn glow"
+              onClick={() => {
+                setAuthMode('login');
+                setShowAuthDrawer(true);
+                initAudioContext();
+              }}
+            >
+              Sign In to Identity 🔑
+            </button>
+            <button 
+              className="btn btn-secondary onboarding-btn"
+              onClick={() => {
+                setAuthMode('signup');
+                setShowAuthDrawer(true);
+                initAudioContext();
+              }}
+            >
+              Create Agent Account 🚀
+            </button>
+          </div>
+
+          <hr className="glass-hr" />
+
+          {/* Reasons to Use Pro Suite Matrix below buttons */}
+          <div className="onboarding-benefits-matrix">
+            <h4>💡 Why Choose the Pro Suite Ecosystem?</h4>
+            <div className="benefits-grid">
+              <div className="benefit-item">
+                <span className="benefit-icon">🛡️</span>
+                <div className="benefit-text">
+                  <h5>100% Chromium-Free Privacy</h5>
+                  <p>Rendered natively using absolute vector coordinate layouts on pure Canvas 2D contexts. Zero telemetry, trackers, or tech-monopoly surveillance structures.</p>
+                </div>
+              </div>
+              <div className="benefit-item">
+                <span className="benefit-icon">🤖</span>
+                <div className="benefit-text">
+                  <h5>Gemma 4 Autopilot Integration</h5>
+                  <p>Engage highly advanced agentic browsing. Instruct autopilot in natural language to research tabs, scrape structures, and compile reports automatically.</p>
+                </div>
+              </div>
+              <div className="benefit-item">
+                <span className="benefit-icon">📡</span>
+                <div className="benefit-text">
+                  <h5>Zero-Latency P2P Video Signaling</h5>
+                  <p>Conduct encrypted P2P signaling room meetings and video sessions directly linked into the localized mesh without third-party brokers.</p>
+                </div>
+              </div>
+              <div className="benefit-item">
+                <span className="benefit-icon">📂</span>
+                <div className="benefit-text">
+                  <h5>Local Workspace File Sync</h5>
+                  <p>Fully tethered to the local file system. Seamlessly compiles and reads databases, sheets, slides, keeps, and Dev tree explorers instantaneously.</p>
+                </div>
+              </div>
+              <div className="benefit-item">
+                <span className="benefit-icon">🔌</span>
+                <div className="benefit-text">
+                  <h5>Decentralized Open-Source Hub</h5>
+                  <p>Maintain total control over your code base and extensions. Study, audit, and contribute to an open decentralized system where you retain 100% ownership.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Credentials Slide-Out Drawer Panel */}
+        {showAuthDrawer && (
+          <div className="onboarding-auth-drawer glass-card animate-slide-left">
+            <div className="drawer-header">
+              <h3>{authMode === 'login' ? '🔑 Sign In Identity' : '🚀 Create Agent Profile'}</h3>
+              <button className="btn-close" onClick={() => setShowAuthDrawer(false)}>×</button>
+            </div>
+            
+            <p className="subtitle">Enter your localized tech parameters to initialize your secure mesh profile.</p>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!loginUsername.trim()) return alert('Username is required!');
+              const profile = {
+                isSignedIn: true,
+                username: loginUsername,
+                email: loginEmail || `${loginUsername.toLowerCase()}@pro.eco`,
+                avatar: loginAvatar,
+                registeredAt: new Date().toISOString()
+              };
+              localStorage.setItem('pro_user_profile', JSON.stringify(profile));
+              setUserProfile(profile);
+              
+              // Set the default bookmarks to have Home 🏠
+              setBookmarks([
+                { name: 'Home 🏠', url: 'pro://home' },
+                { name: 'Theme Store 🎨', url: 'pro://themes' },
+                { name: 'Engine Specs', url: 'pro://engine' },
+                { name: 'Extension Store', url: 'pro://store' },
+                { name: 'Agent Autopilot 🤖', url: 'pro://agent' },
+                { name: 'Pro Docs', url: 'pro://docs' },
+                { name: 'Pro Sheets', url: 'pro://sheets' },
+                { name: 'Pro Slides', url: 'pro://slides' },
+                { name: 'Pro Dev (ADE)', url: 'http://localhost:5176' }
+              ]);
+
+              // Redirect to pro://home immediately
+              setTabs([
+                {
+                  id: 'tab-1',
+                  title: 'Home Dashboard 🏠',
+                  url: 'pro://home',
+                  history: ['pro://home'],
+                  historyIndex: 0
+                }
+              ]);
+              setActiveTabId('tab-1');
+              setAddressInput('pro://home');
+              
+              setShowAuthDrawer(false);
+              playMouseSound(currentTheme.mouseNoise);
+            }} className="auth-form">
+              
+              <div className="form-group">
+                <label>Agent Username</label>
+                <input 
+                  type="text"
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  placeholder="e.g. Neo_Architect"
+                  className="input-field"
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label>Access Email Address</label>
+                <input 
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="e.g. neo@pro.eco"
+                  className="input-field"
+                />
+              </div>
+
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label>Select Workspace Avatar</label>
+                <select 
+                  value={loginAvatar}
+                  onChange={(e) => setLoginAvatar(e.target.value)}
+                  className="input-field select-field"
+                >
+                  <option value="🤖">🤖 Cyber Autopilot</option>
+                  <option value="🛸">🛸 Holographic Saucer</option>
+                  <option value="🌌">🌌 Nebula Drift</option>
+                  <option value="💻">💻 Core Terminal</option>
+                  <option value="🧠">🧠 Neural Matrix</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label>Passkey Access Key</label>
+                <input 
+                  type="password"
+                  value={loginPasskey}
+                  onChange={(e) => setLoginPasskey(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="input-field"
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary auth-submit-btn glow" style={{ marginTop: '1.5rem', width: '100%', padding: '0.75rem' }}>
+                {authMode === 'login' ? 'Engage Mesh Gateway ✦' : 'Register Profile & Sync ✦'}
+              </button>
+
+            </form>
+          </div>
+        )}
+
+        {/* Global Onboarding styling embed */}
+        <style>{`
+          .pro-browser-onboarding-wrapper {
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.12), transparent 50%), #06070a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 2rem;
+            position: relative;
+            font-family: 'Inter', sans-serif;
+          }
+          .onboarding-welcome-panel {
+            max-width: 760px;
+            width: 100%;
+            padding: 2.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+          }
+          .onboarding-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+          }
+          .onboarding-logo {
+            font-size: 2.2rem;
+            text-shadow: 0 0 12px var(--accent-glow);
+          }
+          .onboarding-header h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #ffffff;
+            margin: 0;
+            background: linear-gradient(135deg, #ffffff 30%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          }
+          .onboarding-version {
+            font-family: var(--mono-font);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--glass-border);
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            margin-left: auto;
+          }
+          .glass-hr {
+            border: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+            margin: 0;
+          }
+          .onboarding-note-section h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+          }
+          .onboarding-note-section p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            margin: 0;
+          }
+          .onboarding-actions-row {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+          }
+          .onboarding-btn {
+            font-size: 0.95rem;
+            padding: 0.75rem 2rem;
+            height: 48px;
+            min-width: 220px;
+          }
+          .btn.glow {
+            box-shadow: 0 0 15px var(--accent-glow);
+          }
+          .btn.glow:hover {
+            box-shadow: 0 0 25px var(--accent-glow);
+          }
+          .onboarding-benefits-matrix h4 {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 1rem;
+          }
+          .benefits-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+          }
+          @media (min-width: 600px) {
+            .benefits-grid {
+              grid-template-columns: 1fr 1fr;
+            }
+            .benefits-grid > :last-child {
+              grid-column: span 2;
+            }
+          }
+          .benefit-item {
+            display: flex;
+            gap: 0.75rem;
+            background: rgba(255,255,255,0.01);
+            border: 1px solid rgba(255,255,255,0.02);
+            padding: 0.85rem;
+            border-radius: 10px;
+            transition: all var(--transition-speed);
+          }
+          .benefit-item:hover {
+            background: rgba(255,255,255,0.02);
+            border-color: rgba(139, 92, 246, 0.1);
+          }
+          .benefit-icon {
+            font-size: 1.5rem;
+          }
+          .benefit-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+          }
+          .benefit-text h5 {
+            font-size: 0.86rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin: 0;
+          }
+          .benefit-text p {
+            font-size: 0.76rem;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.4;
+          }
+          .onboarding-auth-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            border-left: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0;
+            padding: 2rem;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+          }
+          .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .drawer-header h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+          }
+          .auth-form {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+          }
+          .animate-slide-left {
+            animation: slideLeft 0.3s ease-out forwards;
+          }
+          @keyframes slideLeft {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
   return (
     <div className={isAgentWindow ? "autopilot-workspace-split" : "pro-browser-normal-container"}>
       <div className={isAgentWindow ? "autopilot-workspace-left" : "pro-browser-normal-left"}>
-        <div className="pro-browser-app" style={isAgentWindow ? { height: '100%' } : {}}>
+        <div className="pro-browser-app" style={{ height: '100%', background: currentTheme.newTabWallpaper && activeTab.url.startsWith('pro://') ? currentTheme.newTabWallpaper : 'var(--bg-primary)' }}>
           {/* ─── BROWSER SHELL HEADER ─── */}
           <div className="browser-shell-header">
             
@@ -730,16 +1240,16 @@ export default function App() {
                   );
                 })}
               </div>
-              <button className="add-tab-btn" onClick={() => handleAddNewTab('pro://welcome', 'New Tab')}>+ New Tab</button>
-            </div>
-
-            {/* Navigation Bar Address Control */}
-            <div className="nav-bar-row">
-              <div className="nav-controls">
-                <button className="nav-arrow" onClick={handleGoBack} disabled={activeTab.historyIndex === 0}>◀</button>
-                <button className="nav-arrow" onClick={handleGoForward} disabled={activeTab.historyIndex === activeTab.history.length - 1}>▶</button>
-                <button className="nav-arrow" onClick={() => navigateToUrl('pro://welcome')}>🏠</button>
-              </div>
+               <button className="add-tab-btn" onClick={() => handleAddNewTab()}>+ New Tab</button>
+             </div>
+ 
+             {/* Navigation Bar Address Control */}
+             <div className="nav-bar-row">
+               <div className="nav-controls">
+                 <button className="nav-arrow" onClick={handleGoBack} disabled={activeTab.historyIndex === 0}>◀</button>
+                 <button className="nav-arrow" onClick={handleGoForward} disabled={activeTab.historyIndex === activeTab.history.length - 1}>▶</button>
+                 <button className="nav-arrow" onClick={() => navigateToUrl(userProfile.isSignedIn ? 'pro://home' : 'pro://welcome')}>🏠</button>
+               </div>
 
               <form
                 onSubmit={(e) => {
@@ -785,6 +1295,24 @@ export default function App() {
 
           {/* ─── BROWSER SCREEN DISPLAY AREA ─── */}
           <div className="browser-content-viewport">
+            {activeTab.url === 'pro://home' && (
+              <HomeDashboard
+                userProfile={userProfile}
+                onNavigate={navigateToUrl}
+                currentTheme={currentTheme}
+              />
+            )}
+
+            {activeTab.url === 'pro://themes' && (
+              <ThemeStore
+                currentTheme={currentTheme}
+                onApplyTheme={(theme) => {
+                  setCurrentTheme(theme);
+                  localStorage.setItem('pro_current_theme', JSON.stringify(theme));
+                }}
+              />
+            )}
+
             {activeTab.url === 'pro://welcome' && (
               <WelcomePortal onNavigate={navigateToUrl} />
             )}
