@@ -208,7 +208,7 @@ function compileDOMToLayout(dom, viewportWidth = 800, isGoogle = false) {
         if (tag === 'img' && (attrs.src && attrs.src.includes('googlelogo'))) {
           layoutElements.push({
             type: 'image',
-            src: attrs.src,
+            src: 'https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png', // Explicitly use the gorgeous transparent colored logo
             alt: attrs.alt || 'Google Logo',
             x: 264, // Center a 272px wide image on an 800px viewport
             y: 100,
