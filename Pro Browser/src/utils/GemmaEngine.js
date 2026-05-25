@@ -5,6 +5,8 @@
  * 
  * Standalone Gemma Web Rendering Engine
  * Built completely from scratch without Chromium / WebKit
+ */
+
 // Standalone asynchronous Image Cache to draw real visual images on Canvas without flickering
 const imageCache = new Map();
 const pendingImages = new Set();
