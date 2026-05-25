@@ -152,6 +152,17 @@ export default function App() {
     paintCanvas();
   }, [webLayout, activeTab?.url, activeExtensions, autopilot.cursorX, autopilot.cursorY, autopilot.showCursor, autopilot.cursorText, autopilot.targetPulse]);
 
+  // Listen for background image cache completion events and trigger repaint
+  useEffect(() => {
+    const handleRepaint = () => {
+      paintCanvas();
+    };
+    window.addEventListener('gemma-repaint', handleRepaint);
+    return () => {
+      window.removeEventListener('gemma-repaint', handleRepaint);
+    };
+  }, [webLayout, activeTab?.url, activeExtensions, autopilot]);
+
   // Check query parameters on mount to auto-trigger separate window loops
   useEffect(() => {
     if (isAgentWindow) {

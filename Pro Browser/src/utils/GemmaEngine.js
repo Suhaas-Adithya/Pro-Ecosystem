@@ -5,7 +5,9 @@
  * 
  * Standalone Gemma Web Rendering Engine
  * Built completely from scratch without Chromium / WebKit
- */
+// Standalone asynchronous Image Cache to draw real visual images on Canvas without flickering
+const imageCache = new Map();
+const pendingImages = new Set();
 
 /**
  * Parses raw HTML strings into a basic Document Object Model (DOM) JSON tree.
@@ -294,31 +296,70 @@ export function paintLayoutToCanvas(ctx, elements, extensions = []) {
       ctx.lineTo(el.x2, el.y2);
       ctx.stroke();
     } else if (el.type === 'image') {
-      // Draw premium glassmorphic border for visual loading placeholder
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(el.x, el.y, el.width, el.height, 12);
-      ctx.fill();
-      ctx.stroke();
+      const src = el.src;
       
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-      ctx.font = "12px sans-serif";
-      ctx.fillText(`🖼️ Image: ${el.src.split('/').pop()}`, el.x + 15, el.y + el.height / 2);
+      // Resolve relative images against Google or active domain safely
+      let resolvedSrc = src;
+      if (src.startsWith('/')) {
+        resolvedSrc = 'https://www.google.com' + src;
+      }
+      
+      const drawPlaceholder = () => {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(el.x, el.y, el.width, el.height, 12);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.font = "12px 'Inter', sans-serif";
+        ctx.fillText(`🖼️ Image: ${el.src.split('/').pop()}`, el.x + 15, el.y + el.height / 2);
+      };
+      
+      if (imageCache.has(resolvedSrc)) {
+        const cachedImg = imageCache.get(resolvedSrc);
+        if (cachedImg.complete && cachedImg.naturalWidth !== 0) {
+          ctx.drawImage(cachedImg, el.x, el.y, el.width, el.height);
+        } else {
+          drawPlaceholder();
+        }
+      } else {
+        drawPlaceholder();
+        
+        // Load the image asynchronously in the background
+        if (!pendingImages.has(resolvedSrc)) {
+          pendingImages.add(resolvedSrc);
+          const img = new Image();
+          img.crossOrigin = 'anonymous'; // Support transparent pixels and avoid CORS taint
+          img.src = resolvedSrc;
+          img.onload = () => {
+            imageCache.set(resolvedSrc, img);
+            pendingImages.delete(resolvedSrc);
+            // Dispatch a window event to trigger repaint on the canvas shell!
+            window.dispatchEvent(new CustomEvent('gemma-repaint'));
+          };
+          img.onerror = () => {
+            pendingImages.delete(resolvedSrc);
+          };
+        }
+      }
     } else if (el.type === 'input') {
       // Draw cyber form elements
       ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.roundRect(el.x, el.y - 14, el.width, el.height, 8);
+      // Capsule pill shape for larger search bars!
+      const borderRadius = el.height >= 40 ? el.height / 2 : 8;
+      ctx.roundRect(el.x, el.y - 14, el.width, el.height, borderRadius);
       ctx.fill();
       ctx.stroke();
       
       ctx.fillStyle = '#64748b'; // Muted grey placeholder
-      ctx.font = "13px sans-serif";
-      ctx.fillText(el.placeholder, el.x + 10, el.y + 8);
+      ctx.font = "13px 'Inter', sans-serif";
+      ctx.fillText(el.placeholder, el.x + 15, el.y + 8);
     } else if (el.type === 'button') {
       // Draw brand action button (frosted slate with glossy overlay)
       ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
