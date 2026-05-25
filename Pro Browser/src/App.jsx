@@ -623,6 +623,27 @@ export default function App() {
 
                 localStorage.setItem('prodocs-draft', compiledReport);
 
+                // Physically save the report in the user's workspace (research_report.md)
+                fetch(`${SOCKET_URL}/api/fs/write`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    path: 'e:\\Projects\\Project Pro\\research_report.md',
+                    content: compiledReport
+                  })
+                }).then(res => res.json())
+                  .then(data => {
+                    setAutopilot(prev => ({
+                      ...prev,
+                      logs: [
+                        ...prev.logs,
+                        `💾 [AI Autopilot] Physically committed report to local workspace: research_report.md`
+                      ]
+                    }));
+                  }).catch(e => {
+                    console.error("FS write failed:", e);
+                  });
+
                 // Finalize autopilot
                 const t5 = setTimeout(() => {
                   setAutopilot(prev => ({

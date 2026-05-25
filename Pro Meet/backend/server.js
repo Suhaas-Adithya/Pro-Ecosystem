@@ -190,6 +190,14 @@ function compileDOMToLayout(dom, viewportWidth = 800) {
   function walk(node, parentStyles = {}) {
     if (!node) return;
     
+    // Completely ignore invisible metadata, script, and style tags so they don't leak visible text nodes
+    if (node.type === 'element') {
+      const tag = node.tagName;
+      if (['script', 'style', 'head', 'meta', 'link', 'title'].includes(tag)) {
+        return;
+      }
+    }
+    
     if (node.type === 'text') {
       const text = node.content;
       const fontSize = parentStyles.fontSize || 14;
