@@ -258,7 +258,7 @@ function compileDOMToLayout(dom, viewportWidth = 800, isGoogle = false) {
         const isLink = node.tagName === 'a' || parentStyles.isLink;
         const linkUrl = node.tagName === 'a' ? (node.attributes?.href || '#') : parentStyles.linkUrl;
         
-        if (textContent.includes('Gmail')) {
+        if (textContent && textContent.includes('Gmail')) {
           layoutElements.push({
             type: 'text',
             text: 'Gmail',
@@ -273,7 +273,7 @@ function compileDOMToLayout(dom, viewportWidth = 800, isGoogle = false) {
           });
           return;
         }
-        if (textContent.includes('Images')) {
+        if (textContent && textContent.includes('Images')) {
           layoutElements.push({
             type: 'text',
             text: 'Images',
@@ -288,7 +288,7 @@ function compileDOMToLayout(dom, viewportWidth = 800, isGoogle = false) {
           });
           return;
         }
-        if (textContent.includes('Sign in') || textContent.includes('Sign In')) {
+        if (textContent && (textContent.includes('Sign in') || textContent.includes('Sign In'))) {
           layoutElements.push({
             type: 'button',
             text: 'Sign in',
@@ -303,7 +303,7 @@ function compileDOMToLayout(dom, viewportWidth = 800, isGoogle = false) {
         }
         
         // 4. Horizontal Spaced-out Footer Links
-        if (isLink && !['Gmail', 'Images', 'Sign in'].some(t => textContent.includes(t))) {
+        if (isLink && textContent && !['Gmail', 'Images', 'Sign in'].some(t => textContent.includes(t))) {
           if (currentY < 480) {
             currentY = 480;
             currentX = 40;
