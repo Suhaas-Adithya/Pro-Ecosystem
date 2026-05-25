@@ -320,15 +320,20 @@ export function paintLayoutToCanvas(ctx, elements, extensions = []) {
       ctx.font = "13px sans-serif";
       ctx.fillText(el.placeholder, el.x + 10, el.y + 8);
     } else if (el.type === 'button') {
-      // Draw brand action button
-      ctx.fillStyle = 'hsl(250, 85%, 65%)';
+      // Draw brand action button (frosted slate with glossy overlay)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.roundRect(el.x, el.y - 12, el.width, el.height, 8);
       ctx.fill();
+      ctx.stroke();
       
       ctx.fillStyle = '#ffffff';
-      ctx.font = "bold 12px sans-serif";
-      ctx.fillText("Action", el.x + 22, el.y + 8);
+      ctx.font = "bold 12px 'Inter', sans-serif";
+      const btnText = el.text || 'Button';
+      const textWidth = ctx.measureText(btnText).width;
+      ctx.fillText(btnText, el.x + (el.width - textWidth) / 2, el.y + 8);
     }
   });
 

@@ -180,7 +180,7 @@ function parseHTMLToDOM(html) {
   return stack[0].children;
 }
 
-function compileDOMToLayout(dom, viewportWidth = 800) {
+function compileDOMToLayout(dom, viewportWidth = 800, isGoogle = false) {
   const layoutElements = [];
   let currentX = 20;
   let currentY = 20;
@@ -195,6 +195,134 @@ function compileDOMToLayout(dom, viewportWidth = 800) {
       const tag = node.tagName;
       if (['script', 'style', 'head', 'meta', 'link', 'title'].includes(tag)) {
         return;
+      }
+    }
+    
+    // Google Visual Override Layout Solver
+    if (isGoogle) {
+      if (node.type === 'element') {
+        const tag = node.tagName;
+        const attrs = node.attributes || {};
+        
+        // 1. Google Centered Logo
+        if (tag === 'img' && (attrs.src && attrs.src.includes('googlelogo'))) {
+          layoutElements.push({
+            type: 'image',
+            src: attrs.src,
+            alt: attrs.alt || 'Google Logo',
+            x: 264, // Center a 272px wide image on an 800px viewport
+            y: 100,
+            width: 272,
+            height: 92
+          });
+          return; // Skip walking children
+        }
+        
+        // 2. Google Centered Search Input & Search Buttons
+        if (tag === 'input' && (attrs.name === 'q' || attrs.type === 'text' || attrs.title === 'Search')) {
+          layoutElements.push({
+            type: 'input',
+            value: attrs.value || "",
+            placeholder: attrs.placeholder || "Search Google or type a URL",
+            x: 180, // Center a 440px wide input on an 800px viewport
+            y: 220,
+            width: 440,
+            height: 40,
+            name: attrs.name || "q"
+          });
+          
+          // Inject standard centered Google buttons right below the input!
+          layoutElements.push({
+            type: 'button',
+            text: 'Google Search',
+            x: 275,
+            y: 275,
+            width: 115,
+            height: 34
+          });
+          layoutElements.push({
+            type: 'button',
+            text: "I'm Feeling Lucky",
+            x: 405,
+            y: 275,
+            width: 130,
+            height: 34
+          });
+          return;
+        }
+      }
+      
+      // 3. Top-Right Navigation Links & Button
+      if (node.type === 'text' || (node.type === 'element' && node.tagName === 'a')) {
+        const textContent = node.type === 'text' ? node.content : (node.children?.[0]?.content || '');
+        const isLink = node.tagName === 'a' || parentStyles.isLink;
+        const linkUrl = node.tagName === 'a' ? (node.attributes?.href || '#') : parentStyles.linkUrl;
+        
+        if (textContent.includes('Gmail')) {
+          layoutElements.push({
+            type: 'text',
+            text: 'Gmail',
+            x: 630,
+            y: 30,
+            width: 35,
+            height: 14,
+            fontSize: 13,
+            color: '#3b82f6', // Light blue link color
+            isLink: true,
+            linkUrl
+          });
+          return;
+        }
+        if (textContent.includes('Images')) {
+          layoutElements.push({
+            type: 'text',
+            text: 'Images',
+            x: 680,
+            y: 30,
+            width: 45,
+            height: 14,
+            fontSize: 13,
+            color: '#3b82f6',
+            isLink: true,
+            linkUrl
+          });
+          return;
+        }
+        if (textContent.includes('Sign in') || textContent.includes('Sign In')) {
+          layoutElements.push({
+            type: 'button',
+            text: 'Sign in',
+            x: 740,
+            y: 16,
+            width: 70,
+            height: 28,
+            isLink: true,
+            linkUrl
+          });
+          return;
+        }
+        
+        // 4. Horizontal Spaced-out Footer Links
+        if (isLink && !['Gmail', 'Images', 'Sign in'].some(t => textContent.includes(t))) {
+          if (currentY < 480) {
+            currentY = 480;
+            currentX = 40;
+          }
+          layoutElements.push({
+            type: 'text',
+            text: textContent,
+            x: currentX,
+            y: currentY,
+            width: textContent.length * 7,
+            height: 12,
+            fontSize: 12,
+            color: '#64748b', // Muted slate color
+            isLink: true,
+            linkUrl
+          });
+          currentX += textContent.length * 7 + 25; // Space out links horizontally
+          return;
+        }
       }
     }
     
@@ -391,8 +519,9 @@ app.get('/api/browser/render', async (req, res) => {
     html = html.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, ''); // Strip noscript blocks
     html = html.replace(/<iframe\b[\s\S]*?<\/iframe>/gi, ''); // Strip iframe blocks
     
+    const isGoogle = targetUrl.includes('google.com');
     const dom = parseHTMLToDOM(html);
-    const layout = compileDOMToLayout(dom, 800);
+    const layout = compileDOMToLayout(dom, 800, isGoogle);
     
     res.json({
       url: targetUrl,
