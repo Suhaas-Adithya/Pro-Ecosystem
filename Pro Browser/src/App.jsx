@@ -15,7 +15,7 @@ import HomeDashboard from './components/HomeDashboard';
 import ThemeStore from './components/ThemeStore';
 import { ProDocs, ProSheets, ProSlides } from './components/DocsSheetSlides';
 import { paintLayoutToCanvas, resolveAnchorClick } from './utils/GemmaEngine';
-import { playKeyboardSound, playMouseSound, initAudioContext } from './utils/SynthAudio';
+import { playKeyboardSound, playMouseSound, initAudioContext, playCustomSound } from './utils/SynthAudio';
 
 const SOCKET_URL = 'http://localhost:3001';
 
@@ -211,9 +211,13 @@ export default function App() {
     const handleGlobalClick = (e) => {
       // Play mouse noise if enabled
       if (userProfile.isSignedIn && currentTheme.mouseNoise) {
-        if (e.target.closest('.audio-test-pad') || e.target.closest('.color-picker-input')) return;
+        if (e.target.closest('.audio-test-pad') || e.target.closest('.color-picker-input') || e.target.closest('input[type="file"]')) return;
         initAudioContext();
-        playMouseSound(currentTheme.mouseNoise);
+        if (currentTheme.mouseNoise === 'custom') {
+          playCustomSound(currentTheme.customMouseSfx);
+        } else {
+          playMouseSound(currentTheme.mouseNoise);
+        }
       }
     };
 
@@ -225,7 +229,11 @@ export default function App() {
         const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
         if (isInput) {
           initAudioContext();
-          playKeyboardSound(currentTheme.keyboardNoise);
+          if (currentTheme.keyboardNoise === 'custom') {
+            playCustomSound(currentTheme.customKeyboardSfx);
+          } else {
+            playKeyboardSound(currentTheme.keyboardNoise);
+          }
         }
       }
     };

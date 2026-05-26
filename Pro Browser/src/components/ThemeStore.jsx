@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { playKeyboardSound, playMouseSound, initAudioContext } from '../utils/SynthAudio';
+import { playKeyboardSound, playMouseSound, initAudioContext, playCustomSound } from '../utils/SynthAudio';
 
 export const PRESETS = [
   {
@@ -88,6 +88,10 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
   const [customKeyNoise, setCustomKeyNoise] = useState('mechanical-switch');
   const [customMouseNoise, setCustomMouseNoise] = useState('water-pop');
   
+  // Custom uploaded sound tracks (Base64 data URLs)
+  const [uploadedKeyboardSfx, setUploadedKeyboardSfx] = useState('');
+  const [uploadedMouseSfx, setUploadedMouseSfx] = useState('');
+  
   // Audio test helpers
   const [testInput, setTestInput] = useState('');
 
@@ -142,14 +146,54 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
     }
   }, []);
 
+  const handleKeyboardSfxUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setUploadedKeyboardSfx(event.target.result);
+        playCustomSound(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleMouseSfxUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setUploadedMouseSfx(event.target.result);
+        playCustomSound(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleTestKeydown = (e) => {
     initAudioContext();
-    playKeyboardSound(customKeyNoise);
+    if (customKeyNoise === 'custom') {
+      if (uploadedKeyboardSfx) {
+        playCustomSound(uploadedKeyboardSfx);
+      } else {
+        alert('Please upload a custom keyboard SFX file first!');
+      }
+    } else {
+      playKeyboardSound(customKeyNoise);
+    }
   };
 
   const handleTestMouse = () => {
     initAudioContext();
-    playMouseSound(customMouseNoise);
+    if (customMouseNoise === 'custom') {
+      if (uploadedMouseSfx) {
+        playCustomSound(uploadedMouseSfx);
+      } else {
+        alert('Please upload a custom mouse click SFX file first!');
+      }
+    } else {
+      playMouseSound(customMouseNoise);
+    }
   };
 
   const createCustomThemeObj = () => {
@@ -191,27 +235,53 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
       newTabWallpaper: customWallpaper || `linear-gradient(180deg, ${customBg} 0%, #050508 100%)`,
       keyboardNoise: customKeyNoise,
       mouseNoise: customMouseNoise,
+      customKeyboardSfx: customKeyNoise === 'custom' ? uploadedKeyboardSfx : null,
+      customMouseSfx: customMouseNoise === 'custom' ? uploadedMouseSfx : null,
       description: 'Handcrafted theme customizer layout.',
       isCustom: true
     };
   };
 
   const handleSaveTheme = () => {
+    if (customKeyNoise === 'custom' && !uploadedKeyboardSfx) {
+      alert('Please upload your custom keyboard SFX file first!');
+      return;
+    }
+    if (customMouseNoise === 'custom' && !uploadedMouseSfx) {
+      alert('Please upload your custom mouse click SFX file first!');
+      return;
+    }
     const newTheme = createCustomThemeObj();
     const updated = [newTheme, ...installedThemes];
     setInstalledThemes(updated);
     localStorage.setItem('pro_custom_themes', JSON.stringify(updated));
     onApplyTheme(newTheme);
-    playMouseSound(newTheme.mouseNoise);
+    if (newTheme.mouseNoise === 'custom') {
+      playCustomSound(newTheme.customMouseSfx);
+    } else {
+      playMouseSound(newTheme.mouseNoise);
+    }
   };
 
   const handleUploadTheme = () => {
+    if (customKeyNoise === 'custom' && !uploadedKeyboardSfx) {
+      alert('Please upload your custom keyboard SFX file first!');
+      return;
+    }
+    if (customMouseNoise === 'custom' && !uploadedMouseSfx) {
+      alert('Please upload your custom mouse click SFX file first!');
+      return;
+    }
     const newTheme = createCustomThemeObj();
     const updatedComm = [newTheme, ...communityThemes];
     setCommunityThemes(updatedComm);
     localStorage.setItem('pro_community_themes', JSON.stringify(updatedComm));
     alert(`🚀 "${newTheme.name}" uploaded successfully to the Community Theme Store!`);
-    playMouseSound(newTheme.mouseNoise);
+    if (newTheme.mouseNoise === 'custom') {
+      playCustomSound(newTheme.customMouseSfx);
+    } else {
+      playMouseSound(newTheme.mouseNoise);
+    }
   };
 
   const handleDeleteTheme = (id, e) => {
@@ -410,7 +480,23 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
                 <option value="typewriter">📟 Retro Typewriter (Wood snap)</option>
                 <option value="cyber-glitch">⚡ Synth Glitch (Chirp slide)</option>
                 <option value="digital-click">🖱️ Digital Click (Ultra brief)</option>
+                <option value="custom">💾 Upload Custom SFX File...</option>
               </select>
+              {customKeyNoise === 'custom' && (
+                <div className="sfx-upload-container" style={{ marginTop: '0.5rem' }}>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={handleKeyboardSfxUpload}
+                    className="file-upload-input"
+                    id="keyboard-sfx-file"
+                    style={{ display: 'none' }}
+                  />
+                  <label htmlFor="keyboard-sfx-file" className="btn btn-secondary btn-sm" style={{ width: '100%', border: '1px dashed var(--accent-color)' }}>
+                    {uploadedKeyboardSfx ? '✓ Keyboard SFX Configured' : '📤 Choose Keyboard Audio File'}
+                  </label>
+                </div>
+              )}
             </div>
 
             <div className="form-group" style={{ marginTop: '1rem' }}>
@@ -424,7 +510,23 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
                 <option value="laser-zap">🔫 High Tech Laser Zap</option>
                 <option value="high-tech-click">🔩 Metallic Click Snap</option>
                 <option value="modern-tick">⚪ Dampened Modern Tick</option>
+                <option value="custom">💾 Upload Custom SFX File...</option>
               </select>
+              {customMouseNoise === 'custom' && (
+                <div className="sfx-upload-container" style={{ marginTop: '0.5rem' }}>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={handleMouseSfxUpload}
+                    className="file-upload-input"
+                    id="mouse-sfx-file"
+                    style={{ display: 'none' }}
+                  />
+                  <label htmlFor="mouse-sfx-file" className="btn btn-secondary btn-sm" style={{ width: '100%', border: '1px dashed var(--accent-color)' }}>
+                    {uploadedMouseSfx ? '✓ Mouse SFX Configured' : '📤 Choose Mouse Audio File'}
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* Live Audio Test Area */}

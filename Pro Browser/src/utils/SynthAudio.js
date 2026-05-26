@@ -218,3 +218,21 @@ export function playMouseSound(profile) {
       break;
   }
 }
+
+/**
+ * Plays a custom user-uploaded Base64 dynamic SFX audio track.
+ * @param {string} base64Data Base64 audio file content.
+ */
+export function playCustomSound(base64Data) {
+  if (!base64Data) return;
+  initAudioContext();
+  try {
+    const audio = new Audio(base64Data);
+    audio.volume = 0.45;
+    audio.play().catch((err) => {
+      console.warn("User guesture required before custom audio play:", err.message);
+    });
+  } catch (err) {
+    console.warn("Failed playing custom Base64 audio track:", err);
+  }
+}
