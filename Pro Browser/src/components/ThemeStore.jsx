@@ -85,6 +85,7 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
   const [customAccent, setCustomAccent] = useState('#a855f7');
   const [customBg, setCustomBg] = useState('#0a0a0f');
   const [customWallpaper, setCustomWallpaper] = useState('');
+  const [uploadedWallpaper, setUploadedWallpaper] = useState('');
   const [customKeyNoise, setCustomKeyNoise] = useState('mechanical-switch');
   const [customMouseNoise, setCustomMouseNoise] = useState('water-pop');
   
@@ -170,6 +171,17 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
     }
   };
 
+  const handleWallpaperUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setUploadedWallpaper(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleTestKeydown = (e) => {
     initAudioContext();
     if (customKeyNoise === 'custom') {
@@ -232,7 +244,7 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
       accentHover: hslAccent,
       glassBg: 'rgba(15, 15, 23, 0.65)',
       glassBorderGlow: `rgba(${r}, ${g}, ${b}, 0.25)`,
-      newTabWallpaper: customWallpaper || `linear-gradient(180deg, ${customBg} 0%, #050508 100%)`,
+      newTabWallpaper: uploadedWallpaper ? `url(${uploadedWallpaper})` : (customWallpaper || `linear-gradient(180deg, ${customBg} 0%, #050508 100%)`),
       keyboardNoise: customKeyNoise,
       mouseNoise: customMouseNoise,
       customKeyboardSfx: customKeyNoise === 'custom' ? uploadedKeyboardSfx : null,
@@ -465,8 +477,32 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
                 onChange={(e) => setCustomWallpaper(e.target.value)}
                 placeholder="e.g. url(https://images.unsplash.com/photo-1579546929518-9e396f3cc809)"
                 className="input-field"
+                disabled={uploadedWallpaper !== ''}
               />
               <span className="field-tip">Leave blank to use default solid color with dynamic glow filters.</span>
+              
+              <div className="wallpaper-upload-wrapper" style={{ marginTop: '0.75rem' }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleWallpaperUpload}
+                  className="file-upload-input"
+                  id="wallpaper-file-input"
+                  style={{ display: 'none' }}
+                />
+                <label htmlFor="wallpaper-file-input" className="btn btn-secondary btn-sm" style={{ width: '100%', border: '1px dashed var(--accent-color)' }}>
+                  {uploadedWallpaper ? '✓ Animated/Image Background Configured' : '📤 Upload Animated Background (.gif, .webp, or image)'}
+                </label>
+                {uploadedWallpaper && (
+                  <button 
+                    className="btn btn-sm" 
+                    onClick={() => setUploadedWallpaper('')} 
+                    style={{ marginTop: '0.4rem', width: '100%', fontSize: '0.75rem', padding: '0.2rem', color: 'var(--danger-color)', background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    Clear Uploaded Background ×
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="form-group" style={{ marginTop: '1.2rem' }}>

@@ -1224,7 +1224,16 @@ export default function App() {
   return (
     <div className={isAgentWindow ? "autopilot-workspace-split" : "pro-browser-normal-container"}>
       <div className={isAgentWindow ? "autopilot-workspace-left" : "pro-browser-normal-left"}>
-        <div className="pro-browser-app" style={{ height: '100%', background: currentTheme.newTabWallpaper && activeTab.url.startsWith('pro://') ? currentTheme.newTabWallpaper : 'var(--bg-primary)' }}>
+        <div 
+          className="pro-browser-app" 
+          style={{ 
+            height: '100%', 
+            background: currentTheme.newTabWallpaper && activeTab.url.startsWith('pro://') ? currentTheme.newTabWallpaper : 'var(--bg-primary)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        >
           {/* ─── BROWSER SHELL HEADER ─── */}
           <div className="browser-shell-header">
             
