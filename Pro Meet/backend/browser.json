@@ -1,0 +1,69 @@
+{
+  "bookmarks": [
+    {
+      "name": "Home 🏠",
+      "url": "pro://home"
+    },
+    {
+      "name": "Theme Store 🎨",
+      "url": "pro://themes"
+    },
+    {
+      "name": "Engine Specs",
+      "url": "pro://engine"
+    },
+    {
+      "name": "Extension Store",
+      "url": "pro://store"
+    },
+    {
+      "name": "Agent Autopilot 🤖",
+      "url": "pro://agent"
+    },
+    {
+      "name": "Pro Docs",
+      "url": "pro://docs"
+    },
+    {
+      "name": "Pro Sheets",
+      "url": "pro://sheets"
+    },
+    {
+      "name": "Pro Slides",
+      "url": "pro://slides"
+    },
+    {
+      "name": "Pro Dev (ADE)",
+      "url": "http://localhost:5176"
+    }
+  ],
+  "history": [
+    {
+      "id": "tab-1",
+      "title": "Home Dashboard 🏠",
+      "url": "pro://home",
+      "history": [
+        "pro://home"
+      ],
+      "historyIndex": 0
+    },
+    {
+      "id": "tab-1780548165176",
+      "title": "Home Dashboard 🏠",
+      "url": "pro://home",
+      "history": [
+        "pro://home"
+      ],
+      "historyIndex": 0
+    },
+    {
+      "id": "tab-1780548166000",
+      "title": "Home Dashboard 🏠",
+      "url": "pro://home",
+      "history": [
+        "pro://home"
+      ],
+      "historyIndex": 0
+    }
+  ]
+}

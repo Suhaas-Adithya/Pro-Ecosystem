@@ -1,0 +1,233 @@
+:root {
+  --bg-dark: #09090b;
+  --bg-surface: #18181b;
+  --bg-elevated: #27272a;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+/* HUB LAYOUT */
+.arcade-hub {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--bg-dark);
+}
+
+.arcade-header-nav {
+  display: flex;
+  align-items: center;
+  padding: 16px 40px;
+  background: rgba(9, 9, 11, 0.8);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--bg-elevated);
+}
+
+.arcade-header-nav h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #fff;
+  margin-right: 40px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 24px;
+}
+
+.nav-links span {
+  color: var(--text-muted);
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.nav-links span:hover {
+  color: #fff;
+}
+
+.hub-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 60px;
+}
+
+/* HERO BANNER */
+.hero-banner {
+  height: 400px;
+  background: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 100%), url('https://images.unsplash.com/photo-1552820728-8b83bb6b773f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') center/cover;
+  display: flex;
+  align-items: center;
+  padding: 0 40px;
+  margin-bottom: 40px;
+}
+
+.hero-content {
+  max-width: 500px;
+}
+
+.hero-content h2 {
+  font-size: 48px;
+  margin: 0 0 16px 0;
+  color: #fff;
+}
+
+.hero-content p {
+  font-size: 16px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+
+.btn-secondary {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.2); }
+
+/* CATEGORY ROWS */
+.category-row {
+  margin-bottom: 40px;
+}
+
+.category-title {
+  margin: 0 40px 16px 40px;
+  font-size: 20px;
+  color: #fff;
+}
+
+.games-scroller {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 0 40px;
+  scroll-snap-type: x mandatory;
+}
+
+.games-scroller::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for clean look */
+}
+
+.game-card {
+  min-width: 280px;
+  max-width: 280px;
+  background: var(--bg-surface);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  scroll-snap-align: start;
+}
+
+.game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+  background: var(--bg-elevated);
+}
+
+.game-thumb-wrapper {
+  width: 100%;
+  height: 157px;
+  background: #000;
+}
+
+.game-thumb-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.game-thumb {
+  width: 100%;
+  height: 157px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-card h4 {
+  margin: 12px 16px 4px 16px;
+  font-size: 16px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-genre {
+  margin: 0 16px 16px 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* OLD STYLES NEEDED BY NEON PROTOCOL */
+.menu-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  z-index: 1;
+}
+
+.join-btn {
+  background: transparent;
+  color: hsl(271, 91%, 65%);
+  border: 2px solid hsl(271, 91%, 65%);
+  padding: 1rem 3rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.join-btn:hover {
+  background: hsl(271, 91%, 65%);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
+}
+
+.game-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+  margin-top: 2rem;
+}

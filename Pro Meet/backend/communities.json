@@ -1,0 +1,15 @@
+{
+  "servers": [
+    {
+      "id": "home",
+      "icon": "🏠",
+      "name": "Home / DMs"
+    }
+  ],
+  "channels": {
+    "home": {
+      "text": [],
+      "voice": []
+    }
+  }
+}

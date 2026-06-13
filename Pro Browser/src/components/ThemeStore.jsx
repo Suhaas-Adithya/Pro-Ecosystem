@@ -24,7 +24,10 @@ export const PRESETS = [
     newTabWallpaper: 'radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15), transparent 75%), #06070a',
     keyboardNoise: 'mechanical-switch',
     mouseNoise: 'water-pop',
-    description: 'Frosted dark glassmorphism with deep space violet nebula glow.'
+    description: 'Frosted dark glassmorphism with deep space violet nebula glow.',
+    textPrimary: '#f1f5f9',
+    textSecondary: '#94a3b8',
+    textMuted: '#64748b'
   },
   {
     id: 'cyberpunk-neon',
@@ -72,7 +75,29 @@ export const PRESETS = [
     newTabWallpaper: 'radial-gradient(circle at bottom right, rgba(20, 184, 166, 0.18), transparent 60%), #040d12',
     keyboardNoise: 'digital-click',
     mouseNoise: 'modern-tick',
-    description: 'Icy cyan aura drifting across translucent sea-green layers.'
+    description: 'Icy cyan aura drifting across translucent sea-green layers.',
+    textPrimary: '#f1f5f9',
+    textSecondary: '#94a3b8',
+    textMuted: '#64748b'
+  },
+  {
+    id: 'zen-blue',
+    name: '☁️ Zen Sky (Light)',
+    author: 'Zen Studio',
+    bgPrimary: '#73b2f2',
+    bgSecondary: '#5a9ce3',
+    bgTertiary: '#4287d3',
+    accentColor: '#1e293b',
+    accentHover: '#0f172a',
+    glassBg: 'rgba(255, 255, 255, 0.2)',
+    glassBorderGlow: 'rgba(255, 255, 255, 0.4)',
+    newTabWallpaper: '#73b2f2',
+    keyboardNoise: 'modern-tick',
+    mouseNoise: 'water-pop',
+    description: 'Calm, minimalist pastel blue setup built for focus and clarity.',
+    textPrimary: '#1e293b',
+    textSecondary: '#334155',
+    textMuted: '#475569'
   }
 ];
 
@@ -102,83 +127,111 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
     if (localInstalled) {
       setInstalledThemes(JSON.parse(localInstalled));
     }
-    
-    const localCommunity = localStorage.getItem('pro_community_themes');
-    if (localCommunity) {
-      setCommunityThemes(JSON.parse(localCommunity));
-    } else {
-      // Seed initial community themes
-      const initialCommunity = [
-        {
-          id: 'comm-solarized',
-          name: '🌅 Solarized Future',
-          author: 'Alchemist_AI',
-          bgPrimary: '#0d0d08',
-          bgSecondary: '#1c1c12',
-          bgTertiary: '#2c2a1e',
-          accentColor: 'hsl(38, 95%, 55%)',
-          accentHover: 'hsl(38, 95%, 65%)',
-          glassBg: 'rgba(25, 23, 15, 0.6)',
-          glassBorderGlow: 'rgba(245, 158, 11, 0.25)',
-          newTabWallpaper: 'radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.15), transparent 60%), #0d0d08',
-          keyboardNoise: 'mechanical-switch',
-          mouseNoise: 'water-pop',
-          description: 'Cyber amber colors designed for late-night research sessions.'
-        },
-        {
-          id: 'comm-vaporwave',
-          name: '🌴 Vaporwave Sunset',
-          author: 'Neon_Glitcher',
-          bgPrimary: '#140c1c',
-          bgSecondary: '#241434',
-          bgTertiary: '#341d4c',
-          accentColor: 'hsl(285, 90%, 65%)',
-          accentHover: 'hsl(285, 90%, 75%)',
-          glassBg: 'rgba(30, 15, 45, 0.65)',
-          glassBorderGlow: 'rgba(192, 132, 252, 0.3)',
-          newTabWallpaper: 'linear-gradient(0deg, #180526 0%, #0d0117 100%)',
-          keyboardNoise: 'cyber-glitch',
-          mouseNoise: 'laser-zap',
-          description: 'A nostalgic synthwave grid layout drenched in neon magenta hues.'
-        }
-      ];
-      localStorage.setItem('pro_community_themes', JSON.stringify(initialCommunity));
-      setCommunityThemes(initialCommunity);
-    }
+    fetchCommunityThemes();
   }, []);
 
-  const handleKeyboardSfxUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setUploadedKeyboardSfx(event.target.result);
-        playCustomSound(event.target.result);
-      };
-      reader.readAsDataURL(file);
+  const fetchCommunityThemes = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/api/themes');
+      const data = await res.json();
+      if (data.themes && data.themes.length > 0) {
+        setCommunityThemes(data.themes);
+      } else {
+        // Fallback or empty state
+        const initialCommunity = [
+          {
+            id: 'comm-solarized',
+            name: '🌅 Solarized Future',
+            author: 'Alchemist_AI',
+            bgPrimary: '#0d0d08',
+            bgSecondary: '#1c1c12',
+            bgTertiary: '#2c2a1e',
+            accentColor: 'hsl(38, 95%, 55%)',
+            accentHover: 'hsl(38, 95%, 65%)',
+            glassBg: 'rgba(25, 23, 15, 0.6)',
+            glassBorderGlow: 'rgba(245, 158, 11, 0.25)',
+            newTabWallpaper: 'radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.15), transparent 60%), #0d0d08',
+            keyboardNoise: 'mechanical-switch',
+            mouseNoise: 'water-pop',
+            description: 'Cyber amber colors designed for late-night research sessions.'
+          },
+          {
+            id: 'comm-vaporwave',
+            name: '🌴 Vaporwave Sunset',
+            author: 'Neon_Glitcher',
+            bgPrimary: '#140c1c',
+            bgSecondary: '#241434',
+            bgTertiary: '#341d4c',
+            accentColor: 'hsl(285, 90%, 65%)',
+            accentHover: 'hsl(285, 90%, 75%)',
+            glassBg: 'rgba(30, 15, 45, 0.65)',
+            glassBorderGlow: 'rgba(192, 132, 252, 0.3)',
+            newTabWallpaper: 'linear-gradient(0deg, #180526 0%, #0d0117 100%)',
+            keyboardNoise: 'cyber-glitch',
+            mouseNoise: 'laser-zap',
+            description: 'A nostalgic synthwave grid layout drenched in neon magenta hues.'
+          }
+        ];
+        setCommunityThemes(initialCommunity);
+      }
+    } catch (err) {
+      console.error('Failed to fetch themes:', err);
     }
   };
 
-  const handleMouseSfxUpload = (e) => {
+  const handleKeyboardSfxUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setUploadedMouseSfx(event.target.result);
-        playCustomSound(event.target.result);
-      };
-      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append('asset', file);
+      try {
+        const res = await fetch('http://localhost:3001/api/themes/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.url) {
+          setUploadedKeyboardSfx(data.url);
+          playCustomSound(data.url);
+        }
+      } catch (err) { console.error(err); }
     }
   };
 
-  const handleWallpaperUpload = (e) => {
+  const handleMouseSfxUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setUploadedWallpaper(event.target.result);
-      };
-      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append('asset', file);
+      try {
+        const res = await fetch('http://localhost:3001/api/themes/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.url) {
+          setUploadedMouseSfx(data.url);
+          playCustomSound(data.url);
+        }
+      } catch (err) { console.error(err); }
+    }
+  };
+
+  const handleWallpaperUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append('asset', file);
+      try {
+        const res = await fetch('http://localhost:3001/api/themes/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.url) {
+          setUploadedWallpaper(data.url);
+        }
+      } catch (err) { console.error(err); }
     }
   };
 
@@ -244,7 +297,7 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
       accentHover: hslAccent,
       glassBg: 'rgba(15, 15, 23, 0.65)',
       glassBorderGlow: `rgba(${r}, ${g}, ${b}, 0.25)`,
-      newTabWallpaper: uploadedWallpaper ? `url(${uploadedWallpaper})` : (customWallpaper || `linear-gradient(180deg, ${customBg} 0%, #050508 100%)`),
+      newTabWallpaper: uploadedWallpaper ? (uploadedWallpaper.endsWith('.mp4') || uploadedWallpaper.endsWith('.webm') ? uploadedWallpaper : `url(${uploadedWallpaper})`) : (customWallpaper || `linear-gradient(180deg, ${customBg} 0%, #050508 100%)`),
       keyboardNoise: customKeyNoise,
       mouseNoise: customMouseNoise,
       customKeyboardSfx: customKeyNoise === 'custom' ? uploadedKeyboardSfx : null,
@@ -275,7 +328,7 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
     }
   };
 
-  const handleUploadTheme = () => {
+  const handleUploadTheme = async () => {
     if (customKeyNoise === 'custom' && !uploadedKeyboardSfx) {
       alert('Please upload your custom keyboard SFX file first!');
       return;
@@ -285,14 +338,24 @@ export default function ThemeStore({ currentTheme, onApplyTheme }) {
       return;
     }
     const newTheme = createCustomThemeObj();
-    const updatedComm = [newTheme, ...communityThemes];
-    setCommunityThemes(updatedComm);
-    localStorage.setItem('pro_community_themes', JSON.stringify(updatedComm));
-    alert(`🚀 "${newTheme.name}" uploaded successfully to the Community Theme Store!`);
-    if (newTheme.mouseNoise === 'custom') {
-      playCustomSound(newTheme.customMouseSfx);
-    } else {
-      playMouseSound(newTheme.mouseNoise);
+    try {
+      const res = await fetch('http://localhost:3001/api/themes/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTheme)
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchCommunityThemes();
+        alert(`🚀 "${newTheme.name}" uploaded successfully to the Community Theme Store!`);
+        if (newTheme.mouseNoise === 'custom') {
+          playCustomSound(newTheme.customMouseSfx);
+        } else {
+          playMouseSound(newTheme.mouseNoise);
+        }
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 

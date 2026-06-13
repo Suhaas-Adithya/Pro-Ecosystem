@@ -1,0 +1,32 @@
+{
+  "name": "pro-os",
+  "version": "1.0.0",
+  "description": "Pro OS Desktop Wrapper",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win portable",
+    "dist:mac": "electron-builder --mac dmg",
+    "dist": "electron-builder --win portable --mac dmg"
+  },
+  "build": {
+    "appId": "com.prosuite.os",
+    "productName": "Pro OS",
+    "win": {
+      "target": "portable",
+      "icon": "icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "icon.png",
+      "category": "public.app-category.productivity"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "png-to-ico": "^3.0.1"
+  }
+}

@@ -2,17 +2,224 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const os = require('os');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const fileUpload = require('express-fileupload');
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || null;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+// Unified JSON stores
+const vaultFile = path.join(__dirname, 'vault.json');
+const eventsFile = path.join(__dirname, 'events.json');
+const notesFile = path.join(__dirname, 'notes.json');
+const chatFile = path.join(__dirname, 'chat.json');
+const syncFile = path.join(__dirname, 'sync.json');
+const mailFile = path.join(__dirname, 'mail.json');
+const meetingsFile = path.join(__dirname, 'meetings.json');
+const roomsFile = path.join(__dirname, 'rooms.json');
+const browserFile = path.join(__dirname, 'browser.json');
+const communitiesFile = path.join(__dirname, 'communities.json');
+if (!fs.existsSync(vaultFile)) fs.writeFileSync(vaultFile, JSON.stringify([]), 'utf8');
+if (!fs.existsSync(eventsFile)) fs.writeFileSync(eventsFile, JSON.stringify([]), 'utf8');
+if (!fs.existsSync(notesFile)) fs.writeFileSync(notesFile, JSON.stringify([]), 'utf8');
+if (!fs.existsSync(chatFile)) fs.writeFileSync(chatFile, JSON.stringify({}), 'utf8');
+if (!fs.existsSync(syncFile)) fs.writeFileSync(syncFile, JSON.stringify({}), 'utf8');
+if (!fs.existsSync(mailFile)) fs.writeFileSync(mailFile, JSON.stringify([]), 'utf8');
+if (!fs.existsSync(meetingsFile)) fs.writeFileSync(meetingsFile, JSON.stringify([]), 'utf8');
+if (!fs.existsSync(roomsFile)) fs.writeFileSync(roomsFile, JSON.stringify([]), 'utf8');
+if (!fs.existsSync(browserFile)) fs.writeFileSync(browserFile, JSON.stringify({ bookmarks: [], history: [] }), 'utf8');
+if (!fs.existsSync(communitiesFile)) {
+  const defaultCommunities = {
+    servers: [
+      { id: 'home', icon: '🏠', name: 'Home / DMs' }
+    ],
+    channels: {
+      'home': { text: [], voice: [] }
+    }
+  };
+  fs.writeFileSync(communitiesFile, JSON.stringify(defaultCommunities, null, 2), 'utf8');
+}
 
 const app = express();
 app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(fileUpload());
+
+// ─── UNIFIED ECOSYSTEM APIs ───
+app.get('/api/vault', (req, res) => {
+  res.json({ files: JSON.parse(fs.readFileSync(vaultFile, 'utf8')) });
+});
+app.post('/api/vault', (req, res) => {
+  const files = JSON.parse(fs.readFileSync(vaultFile, 'utf8'));
+  files.push(req.body);
+  fs.writeFileSync(vaultFile, JSON.stringify(files, null, 2), 'utf8');
+  res.json({ success: true });
+});
+
+app.get('/api/events', (req, res) => {
+  res.json({ events: JSON.parse(fs.readFileSync(eventsFile, 'utf8')) });
+});
+app.post('/api/events', (req, res) => {
+  const evts = JSON.parse(fs.readFileSync(eventsFile, 'utf8'));
+  evts.push(req.body);
+  fs.writeFileSync(eventsFile, JSON.stringify(evts, null, 2), 'utf8');
+  res.json({ success: true });
+});
+
+app.get('/api/notes', (req, res) => {
+  res.json({ notes: JSON.parse(fs.readFileSync(notesFile, 'utf8')) });
+});
+app.post('/api/notes', (req, res) => {
+  const notes = JSON.parse(fs.readFileSync(notesFile, 'utf8'));
+  notes.push(req.body);
+  fs.writeFileSync(notesFile, JSON.stringify(notes, null, 2), 'utf8');
+  res.json({ success: true });
+});
+
+app.get('/api/chat', (req, res) => {
+  res.json({ chat: JSON.parse(fs.readFileSync(chatFile, 'utf8')) });
+});
+app.post('/api/chat', (req, res) => {
+  const { channelKey, message } = req.body;
+  const chatStore = JSON.parse(fs.readFileSync(chatFile, 'utf8'));
+  if (!chatStore[channelKey]) chatStore[channelKey] = [];
+  chatStore[channelKey].push(message);
+  fs.writeFileSync(chatFile, JSON.stringify(chatStore, null, 2), 'utf8');
+  res.json({ success: true });
+});
+
+app.put('/api/chat', (req, res) => {
+  const { channelKey, messageId, newText } = req.body;
+  const chatStore = JSON.parse(fs.readFileSync(chatFile, 'utf8'));
+  if (chatStore[channelKey]) {
+    const msg = chatStore[channelKey].find(m => m.id === messageId);
+    if (msg) {
+      msg.text = newText;
+      msg.edited = true;
+      fs.writeFileSync(chatFile, JSON.stringify(chatStore, null, 2), 'utf8');
+      
+      // Also broadcast the edit via socket so clients update instantly
+      ioInstance?.to(channelKey).emit('chat-message-edited', { channelKey, messageId, newText });
+    }
+  }
+  res.json({ success: true });
+});
+
+app.delete('/api/chat', (req, res) => {
+  const { channelKey, messageId } = req.body;
+  const chatStore = JSON.parse(fs.readFileSync(chatFile, 'utf8'));
+  if (chatStore[channelKey]) {
+    chatStore[channelKey] = chatStore[channelKey].filter(m => m.id !== messageId);
+    fs.writeFileSync(chatFile, JSON.stringify(chatStore, null, 2), 'utf8');
+    
+    // Broadcast deletion
+    ioInstance?.to(channelKey).emit('chat-message-deleted', { channelKey, messageId });
+  }
+  res.json({ success: true });
+});
+
+app.get('/api/sync', (req, res) => {
+  const key = req.query.key;
+  const store = JSON.parse(fs.readFileSync(syncFile, 'utf8'));
+  res.json({ value: store[key] || null });
+});
+app.post('/api/sync', (req, res) => {
+  const { key, value } = req.body;
+  const store = JSON.parse(fs.readFileSync(syncFile, 'utf8'));
+  store[key] = value;
+  fs.writeFileSync(syncFile, JSON.stringify(store, null, 2), 'utf8');
+  res.json({ success: true });
+});
+
+app.get('/api/mail', (req, res) => {
+  res.json({ emails: JSON.parse(fs.readFileSync(mailFile, 'utf8')) });
+});
+app.post('/api/mail', (req, res) => {
+  const emails = JSON.parse(fs.readFileSync(mailFile, 'utf8'));
+  
+  // Try to update existing email by id, else push
+  const index = emails.findIndex(m => m.id === req.body.id);
+  if (index >= 0 && req.body.id) {
+    emails[index] = { ...emails[index], ...req.body };
+  } else {
+    if (!req.body.id) req.body.id = Math.random().toString(36).substring(2, 15);
+    emails.push(req.body);
+  }
+  
+  fs.writeFileSync(mailFile, JSON.stringify(emails, null, 2), 'utf8');
+  res.json({ success: true, id: req.body.id });
+});
+
+app.get('/api/meetings', (req, res) => {
+  res.json({ meetings: JSON.parse(fs.readFileSync(meetingsFile, 'utf8')) });
+});
+app.post('/api/meetings', (req, res) => {
+  const meetings = JSON.parse(fs.readFileSync(meetingsFile, 'utf8'));
+  
+  // Try to update existing meeting, otherwise push
+  const index = meetings.findIndex(m => m.id === req.body.id);
+  if (index >= 0) {
+    meetings[index] = { ...meetings[index], ...req.body };
+  } else {
+    meetings.push(req.body);
+  }
+  
+  fs.writeFileSync(meetingsFile, JSON.stringify(meetings, null, 2), 'utf8');
+  res.json({ success: true });
+});
+
+app.get('/api/rooms', (req, res) => {
+  res.json({ rooms: JSON.parse(fs.readFileSync(roomsFile, 'utf8')) });
+});
+app.post('/api/rooms', (req, res) => {
+  const rooms = JSON.parse(fs.readFileSync(roomsFile, 'utf8'));
+  rooms.push(req.body);
+  fs.writeFileSync(roomsFile, JSON.stringify(rooms, null, 2), 'utf8');
+  res.json({ success: true });
+});
+
+app.get('/api/system', (req, res) => {
+  res.json({
+    platform: os.platform(),
+    release: os.release(),
+    arch: os.arch(),
+    cpus: os.cpus().length,
+    totalMem: Math.round(os.totalmem() / 1024 / 1024 / 1024) + ' GB',
+    freeMem: Math.round(os.freemem() / 1024 / 1024 / 1024) + ' GB',
+    uptime: Math.round(os.uptime() / 60) + ' minutes',
+    userInfo: os.userInfo().username
+  });
+});
+
+app.get('/api/browser', (req, res) => {
+  res.json(JSON.parse(fs.readFileSync(browserFile, 'utf8')));
+});
+app.post('/api/browser', (req, res) => {
+  fs.writeFileSync(browserFile, JSON.stringify(req.body, null, 2), 'utf8');
+  res.json({ success: true });
+});
+
+app.get('/api/communities', (req, res) => {
+  res.json(JSON.parse(fs.readFileSync(communitiesFile, 'utf8')));
+});
+app.post('/api/communities', (req, res) => {
+  fs.writeFileSync(communitiesFile, JSON.stringify(req.body, null, 2), 'utf8');
+  res.json({ success: true });
+});
+
+// ─── ARCADE GAMES PROXY ───
+app.get('/api/games/freetogame', async (req, res) => {
+  try {
+    const response = await fetch('https://www.freetogame.com/api/games?platform=browser');
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch games' });
+  }
+});
 
 const server = http.createServer(app);
+let ioInstance = null;
 
 const PORT = process.env.PORT || 3001;
 
@@ -38,6 +245,89 @@ app.post('/api/upload-recording', (req, res) => {
   } catch (err) {
     console.error('Upload error', err);
     res.status(500).json({ error: 'Failed to upload' });
+  }
+});
+
+// ─── THEME STORE & CUSTOM ASSETS ───
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+app.use('/uploads', express.static(uploadsDir));
+
+const themesFile = path.join(__dirname, 'themes.json');
+if (!fs.existsSync(themesFile)) {
+  fs.writeFileSync(themesFile, JSON.stringify([]), 'utf8');
+}
+
+app.post('/api/themes/upload', (req, res) => {
+  if (!req.files || Object.keys(req.files).length === 0) {
+    return res.status(400).json({ error: 'No files were uploaded.' });
+  }
+
+  const uploadedFile = req.files.asset;
+  const filename = `${Date.now()}-${uploadedFile.name.replace(/\\s+/g, '-')}`;
+  const uploadPath = path.join(uploadsDir, filename);
+
+  uploadedFile.mv(uploadPath, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ url: `http://localhost:${PORT}/uploads/${filename}` });
+  });
+});
+
+app.post('/api/themes/save', (req, res) => {
+  try {
+    const newTheme = req.body;
+    const themes = JSON.parse(fs.readFileSync(themesFile, 'utf8'));
+    newTheme.id = Date.now().toString();
+    themes.push(newTheme);
+    fs.writeFileSync(themesFile, JSON.stringify(themes, null, 2), 'utf8');
+    res.json({ success: true, theme: newTheme });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/themes', (req, res) => {
+  try {
+    const themes = JSON.parse(fs.readFileSync(themesFile, 'utf8'));
+    res.json({ themes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── ECOSYSTEM SHARED PROFILE ───
+const profilesFile = path.join(__dirname, 'profiles.json');
+if (!fs.existsSync(profilesFile)) {
+  fs.writeFileSync(profilesFile, JSON.stringify({}), 'utf8');
+}
+
+app.post('/api/profile/save', (req, res) => {
+  const { uid, profileData } = req.body;
+  if (!uid || !profileData) return res.status(400).json({ error: 'Missing uid or profileData' });
+  try {
+    const profiles = JSON.parse(fs.readFileSync(profilesFile, 'utf8'));
+    profiles[uid] = { ...profiles[uid], ...profileData };
+    fs.writeFileSync(profilesFile, JSON.stringify(profiles, null, 2), 'utf8');
+    res.json({ success: true, profile: profiles[uid] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/profile', (req, res) => {
+  const uid = req.query.uid;
+  if (!uid) return res.status(400).json({ error: 'Missing uid parameter' });
+  try {
+    const profiles = JSON.parse(fs.readFileSync(profilesFile, 'utf8'));
+    if (profiles[uid]) {
+      res.json({ profile: profiles[uid] });
+    } else {
+      res.status(404).json({ error: 'Profile not found' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -88,6 +378,20 @@ app.get('/api/fs/read', (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+app.post('/api/fs/upload', (req, res) => {
+  if (!req.files || Object.keys(req.files).length === 0) {
+    return res.status(400).json({ error: 'No files were uploaded.' });
+  }
+  const targetDir = req.body.path || path.resolve(__dirname, '../../');
+  const uploadedFile = req.files.file;
+  const uploadPath = path.join(targetDir, uploadedFile.name);
+
+  uploadedFile.mv(uploadPath, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, path: uploadPath });
+  });
 });
 
 app.post('/api/fs/write', (req, res) => {
@@ -628,6 +932,7 @@ const io = new Server(server, {
     methods: ["GET", "POST"]
   }
 });
+ioInstance = io;
 
 // Basic room signaling
 const rooms = {};
@@ -637,6 +942,20 @@ const roomHosts = {};
 
 io.on('connection', (socket) => {
   console.log('🔗 Client connected:', socket.id);
+
+  // ─── GRAND UNIFICATION: THE ECOSYSTEM EVENT BUS ───
+  socket.on('ecosystem-broadcast', (data) => {
+    // Expected data format: { sourceApp: 'Pro Chat', type: 'NEW_MESSAGE', payload: '...' }
+    console.log(`[Event Bus] Broadcast from ${data.sourceApp}:`, data.type);
+    // Push the event to all listeners (Pro Hub, etc.)
+    io.emit('ecosystem-event', data);
+  });
+
+  // ─── GRAND UNIFICATION: AGENT ORCHESTRATION ───
+  socket.on('agent-launch-app', (appId) => {
+    console.log(`[Agent] Launching OS App: ${appId}`);
+    io.emit('os-launch-app', appId);
+  });
 
   // ─── GEMMA 4 TETHERED ECOSYSTEM AGENTIC SOCKET RELAYS ───
   socket.on('gemma-agent-task', (data) => {
@@ -649,6 +968,11 @@ io.on('connection', (socket) => {
     io.emit('gemma-tool-call-log', data);
   });
 
+  socket.on('broadcast-chat-message', (data) => {
+    // Broadcast text messages to all users in the specified chat room (Pro Chat integration)
+    socket.to(data.roomId).emit('chat-message', data.message);
+  });
+
   socket.on('gemma-file-change', (data) => {
     // Deliver dynamic visual code differences to the Pro Dev editor
     io.emit('gemma-file-diff', data);
@@ -658,6 +982,32 @@ io.on('connection', (socket) => {
     // Log coordinate interaction and sync the browser view frames
     console.log(`[Gemma Browser Core] Socket input relative offset (${data.x}, ${data.y}) on URL: ${data.url}`);
     io.emit('browser-frame-update', { url: data.url, x: data.x, y: data.y, type: data.type });
+  });
+
+  // ─── ARCADE MULTIPLAYER ───
+  socket.on('arcade-join', () => {
+    socket.join('arcade-lobby');
+    const clients = io.sockets.adapter.rooms.get('arcade-lobby');
+    if (clients && clients.size === 2) {
+      const matchId = `match-${Date.now()}`;
+      const arr = Array.from(clients);
+      const p1 = arr[0];
+      const p2 = arr[1];
+      
+      io.to(p1).emit('arcade-start', { matchId, role: 'host' });
+      io.to(p2).emit('arcade-start', { matchId, role: 'guest' });
+      
+      io.sockets.sockets.get(p1).leave('arcade-lobby');
+      io.sockets.sockets.get(p2).leave('arcade-lobby');
+      
+      io.sockets.sockets.get(p1).join(matchId);
+      io.sockets.sockets.get(p2).join(matchId);
+    }
+  });
+
+  socket.on('arcade-state', (data) => {
+    // Host sends ball and paddle state, guest sends paddle state
+    socket.to(data.matchId).emit('arcade-sync', data);
   });
 
   socket.on('join-room', (payload) => {

@@ -1,0 +1,71 @@
+.terminal-window {
+  width: 100vw;
+  height: 100vh;
+  background-color: #050505;
+  color: #00ff00;
+  font-family: 'Courier New', Courier, monospace;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.terminal-header {
+  background-color: #1a1a1a;
+  color: #888;
+  padding: 5px 15px;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #333;
+}
+
+.terminal-body {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.log-line {
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.log-line.system {
+  color: #0088ff;
+}
+
+.log-line.success {
+  color: #00ff00;
+  font-weight: bold;
+}
+
+.log-line.input {
+  color: #fff;
+}
+
+.log-line.output {
+  color: #00ff00;
+}
+
+.input-line {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.prompt {
+  color: #00ff00;
+  margin-right: 10px;
+  font-weight: bold;
+}
+
+#cmd-input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1rem;
+  flex: 1;
+  outline: none;
+}

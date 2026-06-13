@@ -1,377 +1,387 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { PRESETS } from './ThemeStore';
 
 export default function WelcomePortal({ onNavigate }) {
-  const [activeSlide, setActiveSlide] = useState(0);
+  const [step, setStep] = useState(1);
+  const [selectedTheme, setSelectedTheme] = useState('zen-dark');
+  const [importing, setImporting] = useState(false);
+  const [importDone, setImportDone] = useState(false);
 
-  const pillars = [
-    {
-      title: "100% Shared Open Source",
-      badge: "PNCPL-1.0",
-      description: "Unlike Microsoft, Apple, or Google, our entire ecosystem—from the custom canvas browser rendering engine to the P2P video signaling backend and agent loop runner—is open-sourced for community audit. You are in complete control of your data, free to study, customize, and extend it.",
-      icon: "🌐"
-    },
-    {
-      title: "Zero-Latency Tethered Mesh",
-      badge: "Local Sync",
-      description: "Connecting apps through port 3001 Node WebSockets establishes a localized real-time data bus. Completing a Kanban checklist in Keep immediately updates Mail, and video standup triggers instantly schedule chimes across all active views without cloud latency.",
-      icon: "⚡"
-    },
-    {
-      title: "Gemma 4 Edge AI Core",
-      badge: "Agentic Autopilot",
-      description: "Equipped with autonomous developer subagents that run linter bug-check scripts, resolve task sequencing dependency conflicts, generate schedule agendas, and chime audio standup briefs locally with beautiful glowing gradients.",
-      icon: "🧠"
+  // Apply theme dynamically as user selects it during onboarding
+  useEffect(() => {
+    const theme = PRESETS.find(p => p.id === selectedTheme) || PRESETS[0];
+    const root = document.documentElement;
+    root.style.setProperty('--bg-primary', theme.bgPrimary);
+    root.style.setProperty('--bg-secondary', theme.bgSecondary);
+    root.style.setProperty('--bg-tertiary', theme.bgTertiary);
+    root.style.setProperty('--accent-color', theme.accentColor);
+    root.style.setProperty('--accent-glow', theme.accentGlow);
+    root.style.setProperty('--glass-border', theme.glassBorder);
+    root.style.setProperty('--glass-border-glow', theme.glassBorderGlow);
+    
+    if (theme.textPrimary) {
+      root.style.setProperty('--text-primary', theme.textPrimary);
+      root.style.setProperty('--text-secondary', theme.textSecondary);
+      root.style.setProperty('--text-muted', theme.textMuted);
     }
-  ];
+  }, [selectedTheme]);
 
-  const competitors = [
-    { category: "Docs & Office", competitor: "Google Workspace / Office 365", proSolution: "Pro Docs & Sheets (pro://docs, pro://sheets)", reason: "100% Offline-ready, built-in formula compilers, and integrated Markdown workflows." },
-    { category: "Web Browsing", competitor: "Google Chrome / Edge (Chromium)", proSolution: "Pro Browser (no Chromium/Blink)", reason: "Custom 2D canvas micro-engine, no analytics or tracking, and server-side sandbox vector streams." },
-    { category: "Team Messaging", competitor: "Slack / Teams", proSolution: "Pro Chat (pro://chat) & Pro Meet", reason: "Direct task code embeds (/task), built-in huddles, and secure P2P channels." },
-    { category: "Code Editor", competitor: "VS Code / Cursor", proSolution: "Pro Dev (Gemma 4 ADE)", reason: "Multi-step agent autopilot loops, tool tracking visual logs, and instant split diff builders." }
-  ];
+  const handleFinish = () => {
+    // Save theme to localStorage to persist it when they exit welcome
+    localStorage.setItem('pro-browser-theme', selectedTheme);
+    window.dispatchEvent(new Event('theme-changed'));
+    onNavigate('pro://home');
+  };
+
+  const handleImport = () => {
+    setImporting(true);
+    setTimeout(() => {
+      setImporting(false);
+      setImportDone(true);
+      setTimeout(() => setStep(4), 1000);
+    }, 2000);
+  };
 
   return (
-    <div className="welcome-portal animate-slide-up">
-      <div className="welcome-hero">
-        <div className="sparkle-core">✦</div>
-        <h1>Welcome to Pro Suite</h1>
-        <p>The first fully-tethered, agentic, and open-source virtual operating environment.</p>
-      </div>
-
-      <div className="dashboard-row-1">
-        {/* Core Pillars Carousel */}
-        <div className="glass-card carousel-card">
-          <div className="carousel-header">
-            <h3>Ecosystem Core Pillars</h3>
-            <div className="carousel-dots">
-              {pillars.map((_, i) => (
-                <button
-                  key={i}
-                  className={`dot-btn ${activeSlide === i ? 'active' : ''}`}
-                  onClick={() => setActiveSlide(i)}
-                />
-              ))}
-            </div>
-          </div>
-          <div className="carousel-body">
-            <span className="pillar-icon">{pillars[activeSlide].icon}</span>
-            <div className="pillar-title-row">
-              <h4>{pillars[activeSlide].title}</h4>
-              <span className="pillar-badge">{pillars[activeSlide].badge}</span>
-            </div>
-            <p>{pillars[activeSlide].description}</p>
-          </div>
+    <div className="onboarding-wizard animate-slide-up">
+      <div className="wizard-container glass-card">
+        
+        {/* Progress Bar */}
+        <div className="wizard-progress">
+          <div className="progress-bar-fill" style={{ width: `${(step / 4) * 100}%` }}></div>
         </div>
 
-        {/* Dynamic Action Panel */}
-        <div className="glass-card cta-card">
-          <h3>Launch Core Apps</h3>
-          <p>Instantly launch other tethered nodes inside local sandbox ports:</p>
-          <div className="cta-grid">
-            <button className="cta-btn" onClick={() => onNavigate('http://localhost:5173')}>
-              <span>📝</span>
-              <div>
-                <strong>Pro Keep</strong>
-                <p>Task Kanban & Alarms</p>
+        <div className="wizard-content">
+          {step === 1 && (
+            <div className="step-content text-center animate-slide-up">
+              <div className="sparkle-icon">☁️</div>
+              <h1>Welcome to a Calmer Internet</h1>
+              <p className="subtitle">Set up your Zen Browser experience in just a few clicks.</p>
+              
+              <div className="hero-graphic">
+                <div className="mini-browser-mockup">
+                  <div className="mockup-sidebar"></div>
+                  <div className="mockup-content">
+                    <div className="mockup-header"></div>
+                    <div className="mockup-body"></div>
+                  </div>
+                </div>
               </div>
-            </button>
-            <button className="cta-btn" onClick={() => onNavigate('http://localhost:5176')}>
-              <span>⚙️</span>
-              <div>
-                <strong>Pro Dev (ADE)</strong>
-                <p>Code Editor & Agents</p>
-              </div>
-            </button>
-            <button className="cta-btn" onClick={() => onNavigate('pro://store')}>
-              <span>🛒</span>
-              <div>
-                <strong>Extension Store</strong>
-                <p>Dynamic App Plugins</p>
-              </div>
-            </button>
-            <button className="cta-btn" onClick={() => onNavigate('pro://docs')}>
-              <span>📑</span>
-              <div>
-                <strong>Pro Docs</strong>
-                <p>Markdown Workspace</p>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
 
-      {/* Competitors Matrix */}
-      <div className="glass-card matrix-card">
-        <h3>Why Pro? The Comparative Matrix</h3>
-        <p className="subtitle">See how the Pro Suite challenges corporate software monopolies by prioritizing user freedom.</p>
-        <div className="matrix-table-wrapper">
-          <table className="matrix-table">
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>Traditional Competitor</th>
-                <th>The Pro Alternative</th>
-                <th>The Open-Source Advantage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {competitors.map((row, index) => (
-                <tr key={index}>
-                  <td className="font-bold text-accent">{row.category}</td>
-                  <td className="text-muted">{row.competitor}</td>
-                  <td><strong>{row.proSolution}</strong></td>
-                  <td className="text-success">✓ {row.reason}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              <button className="btn btn-primary btn-lg mt-4" onClick={() => setStep(2)}>
+                Get Started ✦
+              </button>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="step-content animate-slide-up">
+              <h2 className="text-center">Choose Your Aesthetic</h2>
+              <p className="text-center subtitle">Select a theme that brings you peace.</p>
+              
+              <div className="theme-grid">
+                {PRESETS.map(theme => (
+                  <div 
+                    key={theme.id}
+                    className={`theme-option ${selectedTheme === theme.id ? 'selected' : ''}`}
+                    style={{ background: theme.bgSecondary, borderColor: selectedTheme === theme.id ? theme.accentColor : theme.glassBorder }}
+                    onClick={() => setSelectedTheme(theme.id)}
+                  >
+                    <div className="theme-preview" style={{ background: theme.bgPrimary }}>
+                      <div className="theme-swatch" style={{ background: theme.accentColor }}></div>
+                    </div>
+                    <strong>{theme.name}</strong>
+                  </div>
+                ))}
+              </div>
+
+              <div className="wizard-actions">
+                <button className="btn btn-secondary" onClick={() => setStep(1)}>Back</button>
+                <button className="btn btn-primary" onClick={() => setStep(3)}>Continue ➔</button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="step-content text-center animate-slide-up">
+              <h2>Bring Your Data</h2>
+              <p className="subtitle">Import your bookmarks, history, and passwords from your old browser.</p>
+              
+              <div className="import-card">
+                <div className="browser-icons">
+                  <span className="b-icon">🔴</span>
+                  <span className="b-icon">🦊</span>
+                  <span className="b-icon">🧭</span>
+                </div>
+                
+                {!importing && !importDone && (
+                  <button className="btn btn-secondary btn-lg import-btn" onClick={handleImport}>
+                    Import from Another Browser
+                  </button>
+                )}
+                
+                {importing && (
+                  <div className="import-loading">
+                    <div className="spinner"></div>
+                    <p>Securely transferring data...</p>
+                  </div>
+                )}
+                
+                {importDone && (
+                  <div className="import-success text-success">
+                    <span className="check-icon">✓</span>
+                    <p>Import Complete!</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="wizard-actions">
+                <button className="btn btn-secondary" onClick={() => setStep(2)} disabled={importing}>Back</button>
+                <button className="btn btn-primary" onClick={() => setStep(4)} disabled={importing}>Skip / Continue ➔</button>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="step-content text-center animate-slide-up">
+              <div className="sparkle-icon">✨</div>
+              <h1>You're All Set!</h1>
+              <p className="subtitle">Your Zen experience is ready. Enjoy the calm.</p>
+              
+              <div className="final-check-list">
+                <div className="check-item"><span className="text-success">✓</span> Aesthetic applied</div>
+                <div className="check-item"><span className="text-success">✓</span> Data synchronized</div>
+                <div className="check-item"><span className="text-success">✓</span> Trackers blocked</div>
+              </div>
+
+              <button className="btn btn-primary btn-lg mt-4" onClick={handleFinish}>
+                Start Browsing 🚀
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       <style>{`
-        .welcome-portal {
-          max-width: 1000px;
-          margin: 0 auto;
-          display: flex;
-          flex-direction: column;
-          gap: 2rem;
-          padding-bottom: 3rem;
-        }
-
-        .welcome-hero {
-          text-align: center;
-          padding: 2.5rem 1rem;
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
-          border-radius: 20px;
-          border: 1px solid var(--glass-border);
-          position: relative;
-          overflow: hidden;
-        }
-
-        .sparkle-core {
-          font-size: 2.5rem;
-          color: var(--accent-color);
-          text-shadow: 0 0 15px var(--accent-glow);
-          margin-bottom: 0.5rem;
-          animation: pulse 2s infinite ease-in-out;
-        }
-
-        .welcome-hero h1 {
-          font-size: 2.5rem;
-          font-weight: 800;
-          letter-spacing: -0.04em;
-          background: linear-gradient(135deg, #fff 40%, var(--accent-color));
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-
-        .welcome-hero p {
-          color: var(--text-secondary);
-          margin-top: 0.5rem;
-          font-size: 1.1rem;
-        }
-
-        .dashboard-row-1 {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 2rem;
-        }
-
-        @media (max-width: 800px) {
-          .dashboard-row-1 {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        .carousel-card {
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          min-height: 250px;
-        }
-
-        .carousel-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid var(--glass-border);
-          padding-bottom: 0.75rem;
-          margin-bottom: 1rem;
-        }
-
-        .carousel-dots {
-          display: flex;
-          gap: 0.4rem;
-        }
-
-        .dot-btn {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          border: none;
-          background: var(--bg-tertiary);
-          cursor: pointer;
-          transition: all var(--transition-speed);
-        }
-
-        .dot-btn.active {
-          background: var(--accent-color);
-          box-shadow: 0 0 8px var(--accent-color);
-          transform: scale(1.2);
-        }
-
-        .carousel-body {
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-          flex: 1;
-        }
-
-        .pillar-icon {
-          font-size: 2rem;
-          filter: drop-shadow(0 0 8px var(--accent-glow));
-        }
-
-        .pillar-title-row {
+        .onboarding-wizard {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          justify-content: center;
+          min-height: calc(100vh - 8rem);
+          padding: 2rem;
         }
 
-        .pillar-title-row h4 {
-          font-size: 1.25rem;
-          font-weight: 700;
-          color: var(--text-primary);
-        }
-
-        .pillar-badge {
-          font-size: 0.7rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          background: var(--accent-glow);
-          color: var(--accent-color);
-          padding: 0.15rem 0.5rem;
-          border-radius: 6px;
-          border: 1px solid rgba(139, 92, 246, 0.2);
-        }
-
-        .carousel-body p {
-          color: var(--text-secondary);
-          font-size: 0.92rem;
-          line-height: 1.6;
-        }
-
-        .cta-card {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .cta-card h3 {
-          margin-bottom: 0.25rem;
-        }
-
-        .cta-card > p {
-          font-size: 0.85rem;
-          color: var(--text-secondary);
-          margin-bottom: 1.25rem;
-        }
-
-        .cta-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem;
-          flex: 1;
-        }
-
-        .cta-btn {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          padding: 0.75rem 1rem;
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid var(--glass-border);
-          border-radius: 12px;
-          cursor: pointer;
-          text-align: left;
-          font-family: inherit;
-          transition: all var(--transition-speed);
-        }
-
-        .cta-btn:hover {
-          background: rgba(255, 255, 255, 0.05);
-          border-color: var(--accent-color);
-          transform: translateY(-2px);
-          box-shadow: 0 4px 15px var(--accent-glow);
-        }
-
-        .cta-btn span {
-          font-size: 1.5rem;
-        }
-
-        .cta-btn strong {
-          display: block;
-          font-size: 0.9rem;
-          color: var(--text-primary);
-        }
-
-        .cta-btn p {
-          font-size: 0.7rem;
-          color: var(--text-secondary);
-          margin-top: 0.1rem;
-        }
-
-        .matrix-card h3 {
-          margin-bottom: 0.15rem;
-        }
-
-        .matrix-card .subtitle {
-          font-size: 0.85rem;
-          color: var(--text-secondary);
-          margin-bottom: 1.5rem;
-        }
-
-        .matrix-table-wrapper {
-          overflow-x: auto;
-          border-radius: 12px;
-          border: 1px solid var(--glass-border);
-        }
-
-        .matrix-table {
+        .wizard-container {
           width: 100%;
-          border-collapse: collapse;
-          text-align: left;
-          font-size: 0.9rem;
+          max-width: 700px;
+          min-height: 500px;
+          background: rgba(15, 12, 30, 0.4);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid var(--glass-border);
+          border-radius: 24px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        .matrix-table th, .matrix-table td {
-          padding: 1rem 1.25rem;
+        .wizard-progress {
+          height: 4px;
+          background: rgba(255, 255, 255, 0.05);
+          width: 100%;
+        }
+
+        .progress-bar-fill {
+          height: 100%;
+          background: var(--accent-color);
+          transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .wizard-content {
+          flex: 1;
+          padding: 3rem;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .step-content {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+          animation: slideUp 0.4s ease-out forwards;
+        }
+
+        .text-center { text-align: center; }
+        .mt-4 { margin-top: 2rem; }
+        .subtitle { color: var(--text-secondary); font-size: 1.1rem; }
+
+        .sparkle-icon {
+          font-size: 4rem;
+          margin-bottom: 1rem;
+          animation: pulse 3s infinite ease-in-out;
+        }
+
+        /* Hero Graphic */
+        .hero-graphic {
+          display: flex;
+          justify-content: center;
+          margin: 2rem 0;
+        }
+        .mini-browser-mockup {
+          width: 350px;
+          height: 220px;
+          background: var(--bg-primary);
+          border-radius: 12px;
+          border: 1px solid var(--glass-border);
+          display: flex;
+          overflow: hidden;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .mockup-sidebar {
+          width: 60px;
+          background: var(--bg-secondary);
+          border-right: 1px solid var(--glass-border);
+        }
+        .mockup-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+        .mockup-header {
+          height: 40px;
           border-bottom: 1px solid var(--glass-border);
         }
-
-        .matrix-table th {
-          background: rgba(255, 255, 255, 0.02);
-          color: var(--text-secondary);
-          font-weight: 600;
-          font-size: 0.8rem;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
+        .mockup-body {
+          flex: 1;
+          background: rgba(255,255,255,0.02);
+          margin: 10px;
+          border-radius: 8px;
         }
 
-        .matrix-table tr:last-child td {
-          border-bottom: none;
+        /* Theme Grid */
+        .theme-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 1rem;
+          margin: 1rem 0;
         }
 
-        .text-accent {
+        .theme-option {
+          border: 2px solid transparent;
+          border-radius: 16px;
+          padding: 1rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1rem;
+        }
+        
+        .theme-option:hover {
+          transform: translateY(-2px);
+          border-color: var(--glass-border-glow);
+        }
+        
+        .theme-option.selected {
+          box-shadow: 0 0 20px var(--accent-glow);
+          transform: scale(1.02);
+        }
+
+        .theme-preview {
+          width: 100%;
+          height: 80px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .theme-swatch {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        /* Import Card */
+        .import-card {
+          background: rgba(255,255,255,0.02);
+          border: 1px solid var(--glass-border);
+          border-radius: 16px;
+          padding: 2.5rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1.5rem;
+          margin: 1rem 0;
+        }
+        .browser-icons {
+          display: flex;
+          gap: 1rem;
+          font-size: 2.5rem;
+          opacity: 0.8;
+        }
+        .import-loading {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1rem;
           color: var(--accent-color);
         }
-
-        .text-muted {
-          color: var(--text-muted);
+        .spinner {
+          width: 30px;
+          height: 30px;
+          border: 3px solid rgba(139, 92, 246, 0.2);
+          border-top-color: var(--accent-color);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+        .check-icon {
+          font-size: 3rem;
+          display: block;
+          margin-bottom: 0.5rem;
         }
 
-        .text-success {
-          color: var(--success-color);
+        /* Final Checklist */
+        .final-check-list {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+          align-items: center;
+          margin: 1.5rem 0;
+        }
+        .check-item {
+          font-size: 1.1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          background: rgba(255,255,255,0.03);
+          padding: 0.75rem 1.5rem;
+          border-radius: 12px;
+          border: 1px solid var(--glass-border);
+          width: 100%;
+          max-width: 300px;
+        }
+
+        .wizard-actions {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 1rem;
+          padding-top: 1.5rem;
+          border-top: 1px solid var(--glass-border);
+        }
+
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

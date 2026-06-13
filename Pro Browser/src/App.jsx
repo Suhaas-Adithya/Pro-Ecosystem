@@ -154,6 +154,20 @@ export default function App() {
   // Collapsible DevTools panel state
   const [showDevTools, setShowDevTools] = useState(false);
   const [devToolsTab, setDevToolsTab] = useState('dom');
+
+  // Wave 3: Focus & Productivity States
+  const [focusTimer, setFocusTimer] = useState({ active: false, timeLeft: 25 * 60 });
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [notesData, setNotesData] = useState(() => localStorage.getItem('pro_quick_notes') || '');
+  const [splitViewUrl, setSplitViewUrl] = useState(null);
+  const [osStyle, setOsStyle] = useState(() => localStorage.getItem('pro_os_style') || 'windows');
+  
+  const toggleOsStyle = () => {
+    const newStyle = osStyle === 'windows' ? 'mac' : 'windows';
+    setOsStyle(newStyle);
+    localStorage.setItem('pro_os_style', newStyle);
+  };
+
   const [consoleLogs, setConsoleLogs] = useState([
     { time: new Date().toLocaleTimeString(), text: '✦ Gemma Browser Core Initialized.' },
     { time: new Date().toLocaleTimeString(), text: '✦ Zero-latency real-time workspace synchronization online.' }
@@ -470,6 +484,28 @@ export default function App() {
   };
 
   // Navigations
+  // ─── FOCUS TIMER LOGIC ───
+  useEffect(() => {
+    let interval = null;
+    if (focusTimer.active && focusTimer.timeLeft > 0) {
+      interval = setInterval(() => {
+        setFocusTimer(prev => ({ ...prev, timeLeft: prev.timeLeft - 1 }));
+      }, 1000);
+    } else if (focusTimer.timeLeft === 0) {
+      setFocusTimer(prev => ({ ...prev, active: false, timeLeft: 25 * 60 }));
+      alert("Focus Session Complete! Take a break.");
+    }
+    return () => clearInterval(interval);
+  }, [focusTimer]);
+
+  const toggleFocusTimer = () => {
+    setFocusTimer(prev => ({ 
+      ...prev, 
+      active: !prev.active,
+      timeLeft: prev.timeLeft === 0 ? 25 * 60 : prev.timeLeft 
+    }));
+  };
+
   const navigateToUrl = (targetUrl) => {
     let formattedUrl = targetUrl;
     if (targetUrl.startsWith('/')) {
@@ -1222,96 +1258,181 @@ export default function App() {
   }
 
   return (
-    <div className={isAgentWindow ? "autopilot-workspace-split" : "pro-browser-normal-container"}>
-      <div className={isAgentWindow ? "autopilot-workspace-left" : "pro-browser-normal-left"}>
-        <div 
-          className="pro-browser-app" 
-          style={{ 
-            height: '100%', 
-            background: currentTheme.newTabWallpaper && activeTab.url.startsWith('pro://') ? currentTheme.newTabWallpaper : 'var(--bg-primary)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}
-        >
-          {/* ─── BROWSER SHELL HEADER ─── */}
-          <div className="browser-shell-header">
-            
-            {/* Tab Managers Row */}
-            <div className="tabs-row">
-              <div className="tabs-container">
-                {tabs.map((tab) => {
-                  const isActive = tab.id === activeTabId;
-                  return (
-                    <div
-                      key={tab.id}
-                      className={`browser-tab ${isActive ? 'active' : ''}`}
-                      onClick={() => setActiveTabId(tab.id)}
-                    >
-                      <span className="tab-icon">🌐</span>
-                      <span className="tab-title">{tab.title.substring(0, 22)}{tab.title.length > 22 ? '...' : ''}</span>
-                      {tabs.length > 1 && (
-                        <button className="tab-close-btn" onClick={(e) => handleCloseTab(tab.id, e)}>×</button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-               <button className="add-tab-btn" onClick={() => handleAddNewTab()}>+ New Tab</button>
-             </div>
- 
-             {/* Navigation Bar Address Control */}
-             <div className="nav-bar-row">
-               <div className="nav-controls">
-                 <button className="nav-arrow" onClick={handleGoBack} disabled={activeTab.historyIndex === 0}>◀</button>
-                 <button className="nav-arrow" onClick={handleGoForward} disabled={activeTab.historyIndex === activeTab.history.length - 1}>▶</button>
-                 <button className="nav-arrow" onClick={() => navigateToUrl(userProfile.isSignedIn ? 'pro://home' : 'pro://welcome')}>🏠</button>
-               </div>
+    <div className={isAgentWindow ? "autopilot-workspace-split" : "zen-browser-layout"}>
+      
+      {/* ─── GLOBAL BACKGROUND WALLPAPER ─── */}
+      {!isAgentWindow && currentTheme.newTabWallpaper && (
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
+          {currentTheme.newTabWallpaper.endsWith('.mp4') ? (
+            <video src={currentTheme.newTabWallpaper} autoPlay loop muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ background: `url(${currentTheme.newTabWallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center', width: '100%', height: '100%' }} />
+          )}
+        </div>
+      )}
 
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  navigateToUrl(addressInput);
-                }}
-                className="address-bar-form"
-              >
-                <div className={`address-bar-container ${isSecure ? 'secure' : ''}`}>
-                  <span className="security-icon">{isSecure ? '🔒 pro://' : '🌐 http://'}</span>
-                  <input
-                    type="text"
-                    value={addressInput}
-                    onChange={(e) => setAddressInput(e.target.value)}
-                    placeholder="Enter URL or pro:// welcome | store | engine | docs | sheets | slides | agent..."
-                    className="address-input"
-                  />
-                  {isLoading && <span className="address-spinner animate-spin">✦</span>}
-                </div>
-              </form>
+      {/* ─── WINDOW CONTROLS ─── */}
+      {!isAgentWindow && osStyle === 'windows' && (
+        <div className="zen-window-controls-windows">
+          <span className="min" title="Minimize">─</span>
+          <span className="max" title="Maximize">□</span>
+          <span className="close" title="Close">✕</span>
+        </div>
+      )}
+      {!isAgentWindow && osStyle === 'mac' && (
+        <div className="zen-window-controls-mac">
+          <span className="close" title="Close"></span>
+          <span className="min" title="Minimize"></span>
+          <span className="max" title="Maximize"></span>
+        </div>
+      )}
 
-              <button
-                className={`dev-tools-toggle ${showDevTools ? 'active' : ''}`}
-                onClick={() => setShowDevTools(!showDevTools)}
-              >
-                🪓 DevTools
+      <div className="zen-main-split" style={{ position: 'relative', zIndex: 1 }}>
+        
+        {/* ─── ZEN SIDEBAR (HIDDEN IN AGENT MODE) ─── */}
+        {!isAgentWindow && (
+          <div className="zen-sidebar" style={{ paddingTop: osStyle === 'mac' ? '42px' : '' }}>
+            <div className="workspace-pill" title="Click to cycle Workspaces">
+              <div className="workspace-pill-icon">💻</div>
+              <div className="workspace-pill-text">Personal Space</div>
+            </div>
+
+            <div className="zen-tabs-container">
+              {tabs.map((t) => {
+                const isActive = t.id === activeTabId;
+                let icon = '🌐';
+                if (t.url.includes('pro://home')) icon = '🏠';
+                else if (t.url.includes('pro://themes')) icon = '🎨';
+                else if (t.url.includes('pro://store')) icon = '🧩';
+                else if (t.url.includes('pro://agent')) icon = '🤖';
+                else if (t.url.includes('pro://docs')) icon = '📝';
+                else if (t.url.includes('pro://sheets')) icon = '📊';
+                else if (t.url.includes('pro://slides')) icon = '🖼️';
+                
+                return (
+                  <div 
+                    key={t.id} 
+                    className={`zen-tab ${isActive ? 'active' : ''}`}
+                    onClick={() => setActiveTabId(t.id)}
+                    title={t.title}
+                  >
+                    <div className="zen-tab-icon">{icon}</div>
+                    <div className="zen-tab-title">{t.title}</div>
+                    {tabs.length > 1 && (
+                      <button className="zen-tab-close" onClick={(e) => { e.stopPropagation(); handleCloseTab(t.id, e); }}>✕</button>
+                    )}
+                  </div>
+                );
+              })}
+              <button className="zen-add-tab" onClick={handleAddNewTab} title="New Tab">
+                <div className="zen-tab-icon">+</div>
+                <div className="zen-tab-title">New Tab</div>
               </button>
             </div>
-
-            {/* Bookmark Bar */}
-            <div className="bookmark-bar">
-              {bookmarks.map((bm, index) => (
-                <button
-                  key={index}
-                  className="bookmark-btn"
-                  onClick={() => navigateToUrl(bm.url)}
-                >
-                  ✦ {bm.name}
-                </button>
-              ))}
+            
+            <div className="zen-sidebar-bottom">
+              <div className="zen-tab" onClick={toggleOsStyle} title={`Switch to ${osStyle === 'windows' ? 'Mac' : 'Windows'} style`}>
+                <div className="zen-tab-icon">{osStyle === 'windows' ? '🖥️' : '🍎'}</div>
+                <div className="zen-tab-title">{osStyle === 'windows' ? 'Win OS' : 'Mac OS'}</div>
+              </div>
+              <div className="zen-tab" onClick={() => navigateToUrl('pro://themes')} title="Themes">
+                <div className="zen-tab-icon">🎨</div>
+                <div className="zen-tab-title">Themes</div>
+              </div>
+              <div className="zen-tab" onClick={() => navigateToUrl('pro://settings')} title="Settings">
+                <div className="zen-tab-icon">⚙️</div>
+                <div className="zen-tab-title">Settings</div>
+              </div>
+              <div className="zen-tab" onClick={() => navigateToUrl('pro://home')} title="Profile">
+                <div className="zen-tab-icon" style={{ borderRadius: '50%', overflow: 'hidden', padding: 0, height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {userProfile.avatar && userProfile.avatar.startsWith('data:') ? (
+                    <img src={userProfile.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span>{userProfile.avatar}</span>
+                  )}
+                </div>
+                <div className="zen-tab-title">{userProfile.name}</div>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* ─── BROWSER SCREEN DISPLAY AREA ─── */}
-          <div className="browser-content-viewport">
+        <div className={isAgentWindow ? "autopilot-workspace-left" : "zen-content-area"} style={{ flex: 1 }}>
+          <div 
+            className="pro-browser-app"
+            style={{ 
+              height: '100%', 
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: isAgentWindow ? '0' : '16px',
+              background: 'var(--bg-secondary)'
+            }}
+          >
+          {/* ─── FLOATING WEBVIEW HEADER ─── */}
+            {!isAgentWindow && !activeTab.url.startsWith('pro://welcome') && (
+              <div className="zen-content-header" style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 1rem', background: 'var(--bg-primary)', alignItems: 'center' }}>
+                <div className="nav-controls" style={{ display: 'flex', gap: '0.2rem' }}>
+                  <button type="button" className="zen-nav-btn" onClick={handleGoBack} disabled={activeTab.historyIndex === 0}>◀</button>
+                  <button type="button" className="zen-nav-btn" onClick={handleGoForward} disabled={activeTab.historyIndex === activeTab.history.length - 1}>▶</button>
+                  <button type="button" className="zen-nav-btn" onClick={() => navigateToUrl(userProfile.isSignedIn ? 'pro://home' : 'pro://welcome')}>🏠</button>
+                </div>
+                
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    navigateToUrl(addressInput);
+                  }}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center' }}
+                >
+                  <div className={`zen-address-container ${isSecure ? 'secure' : ''}`} style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'var(--bg-tertiary)', borderRadius: '12px', padding: '0.4rem 1rem', border: '1px solid var(--glass-border)' }}>
+                    <span className="security-icon" style={{ fontSize: '0.8rem', marginRight: '0.5rem', color: isSecure ? 'var(--success-color)' : 'var(--text-secondary)' }}>{isSecure ? '🔒 pro://' : '🌐 http://'}</span>
+                    <input 
+                      type="text"
+                      className="zen-address-input"
+                      value={addressInput}
+                      onChange={(e) => setAddressInput(e.target.value)}
+                      placeholder="Search with Google or enter address"
+                      style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', fontSize: '0.9rem' }}
+                    />
+                    {isLoading && <div className="address-spinner animate-spin" style={{ marginLeft: '8px' }}>✦</div>}
+                  </div>
+                </form>
+
+                <button 
+                  type="button" 
+                  className="zen-nav-btn focus-timer-btn" 
+                  onClick={toggleFocusTimer}
+                  title={focusTimer.active ? "Stop Focus Timer" : "Start 25m Focus Session"}
+                  style={{ color: focusTimer.active ? 'var(--accent-color)' : 'inherit', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+                >
+                  ⏱️ {focusTimer.active ? `${Math.floor(focusTimer.timeLeft / 60)}:${String(focusTimer.timeLeft % 60).padStart(2, '0')}` : ''}
+                </button>
+                <button type="button" className="zen-nav-btn" onClick={() => setIsNotesOpen(!isNotesOpen)} title="Toggle Quick Notes" style={{ color: isNotesOpen ? 'var(--accent-color)' : 'inherit' }}>
+                  📝
+                </button>
+                <button type="button" className="zen-nav-btn" onClick={() => {
+                  setTabs(tabs.map(t => t.id === activeTabId ? { ...t, isPinned: !t.isPinned } : t));
+                }} title={activeTab.isPinned ? "Unpin Tab" : "Pin Tab"} style={{ color: activeTab.isPinned ? 'var(--accent-color)' : 'inherit' }}>
+                  📌
+                </button>
+                <button type="button" className="zen-nav-btn" onClick={() => {
+                  if (splitViewUrl) setSplitViewUrl(null);
+                  else setSplitViewUrl('pro://home');
+                }} title={splitViewUrl ? "Close Split View" : "Open Split View"} style={{ color: splitViewUrl ? 'var(--accent-color)' : 'inherit' }}>
+                  {splitViewUrl ? '◧' : '◨'}
+                </button>
+                <button type="button" className="zen-nav-btn" onClick={() => setShowDevTools(!showDevTools)} title="Toggle Developer Tools">
+                  {showDevTools ? '🛠️' : '👨‍💻'}
+                </button>
+              </div>
+            )}
+
+          {/* ─── BROWSER VIEWPORT ─── */}
+          <div className="browser-content-viewport" style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div className="split-view-container" style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+              <div className="primary-view" style={{ flex: 1, position: 'relative', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {activeTab.url === 'pro://home' && (
               <HomeDashboard
                 userProfile={userProfile}
@@ -1883,10 +2004,69 @@ export default function App() {
               </div>
             </div>
           )}
+              </div>
+
+              {/* ─── SPLIT VIEW PANEL ─── */}
+              {splitViewUrl && (
+                <div className="split-view" style={{ width: '350px', position: 'relative', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--glass-border)' }}>
+                  <div className="split-view-header" style={{ padding: '0.5rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--glass-border)', display: 'flex', gap: '0.5rem' }}>
+                    <input 
+                      type="text" 
+                      value={splitViewUrl} 
+                      onChange={(e) => setSplitViewUrl(e.target.value)} 
+                      style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--glass-border)', color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px' }} 
+                    />
+                    <button className="zen-nav-btn" onClick={() => setSplitViewUrl(null)}>✕</button>
+                  </div>
+                  {splitViewUrl.startsWith('pro://') ? (
+                    <div style={{ padding: '1rem', color: 'white' }}>Internal page open in split view.</div>
+                  ) : (
+                    <iframe 
+                      src={splitViewUrl.startsWith('http') ? splitViewUrl : `https://${splitViewUrl}`} 
+                      style={{ flex: 1, border: 'none', background: 'white' }} 
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* ─── WAVE 3: QUICK NOTES PANEL ─── */}
+              {isNotesOpen && (
+                <div className="quick-notes-panel glass-card" style={{ width: '300px', borderLeft: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', zIndex: 10 }}>
+                  <div className="notes-header" style={{ padding: '1rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontSize: '1rem' }}>Quick Notes</h3>
+                    <button className="zen-nav-btn" onClick={() => setIsNotesOpen(false)}>✕</button>
+                  </div>
+                  <div className="notes-body" style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
+                    <textarea
+                      value={notesData}
+                      onChange={(e) => {
+                        setNotesData(e.target.value);
+                        localStorage.setItem('pro_quick_notes', e.target.value);
+                      }}
+                      placeholder="Jot down quick thoughts here... (Auto-saves)"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        minHeight: '200px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-primary)',
+                        resize: 'none',
+                        outline: 'none',
+                        fontFamily: 'inherit',
+                        lineHeight: '1.5'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ─── GEMMA AUTOPILOT SIDE PANEL (ONLY VISIBLE IN AGENT WINDOW) ─── */}
+      {/* ─── GEMMA AUTOPILOT SIDE PANELL (ONLY VISIBLE IN AGENT WINDOW) ─── */}
       {isAgentWindow && (
         <div className="autopilot-workspace-right glass-card">
           <div className="autopilot-side-panel-content">
@@ -1956,6 +2136,7 @@ export default function App() {
           </div>
         </div>
       )}
+
 
       <style>{`
         /* Top Level Split Layout when Autopilot Window is Active */

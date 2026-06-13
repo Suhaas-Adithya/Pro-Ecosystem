@@ -1,0 +1,32 @@
+{
+  "name": "pro-ecosystem",
+  "version": "1.0.0",
+  "description": "Pro Ecosystem Monorepo",
+  "private": true,
+  "workspaces": [
+    "Pro Agent",
+    "Pro Arcade",
+    "Pro Audio",
+    "Pro Browser",
+    "Pro Calendar",
+    "Pro Chat",
+    "Pro Desktop",
+    "Pro Dev",
+    "Pro Drive",
+    "Pro Hub",
+    "Pro Keep",
+    "Pro Mail",
+    "Pro Meet/frontend",
+    "Pro Meet/backend",
+    "Pro Terminal",
+    "Pro Vault",
+    "Pro Web"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "dev": "node start_all.js",
+    "start": "npm start --workspace=\"Pro Desktop\"",
+    "dist:win": "npm run dist:win --workspace=\"Pro Desktop\"",
+    "dist:mac": "npm run dist:mac --workspace=\"Pro Desktop\""
+  }
+}

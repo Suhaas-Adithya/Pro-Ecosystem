@@ -1,0 +1,207 @@
+/* ─── ZEN WAVE 3 LAYOUT & FEATURES ─── */
+
+/* Focus Timer Button Glow */
+.focus-timer-btn {
+  font-family: var(--mono-font);
+  font-weight: 600;
+  transition: all 0.3s ease;
+  width: auto !important; /* Override standard nav btn width */
+  padding: 0 0.8rem;
+  border-radius: 20px !important;
+}
+
+.focus-timer-btn[title^="Stop"] {
+  background: rgba(139, 92, 246, 0.15);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+  color: var(--accent-color) !important;
+  animation: timerPulse 2s infinite alternate;
+}
+
+@keyframes timerPulse {
+  from { box-shadow: 0 0 5px rgba(139, 92, 246, 0.2); }
+  to { box-shadow: 0 0 15px rgba(139, 92, 246, 0.5); }
+}
+
+/* Split View container */
+.split-view-container {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.primary-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.split-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-left: 1px solid var(--glass-border);
+  background: var(--bg-secondary);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -10px 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.split-view-header {
+  height: 48px;
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.split-view-header input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-family: var(--sans-font);
+  font-size: 0.85rem;
+  transition: border-color 0.2s;
+}
+
+.split-view-header input:focus {
+  border-color: var(--accent-color);
+  outline: none;
+}
+
+/* Quick Notes Panel */
+.quick-notes-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-left: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.4);
+}
+
+.notes-header {
+  height: 48px;
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.notes-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.notes-header h3::before {
+  content: '📝';
+}
+
+.notes-body {
+  flex: 1;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.notes-body textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  resize: none;
+  outline: none;
+  font-family: var(--sans-font);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.notes-body textarea::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Address bar container */
+.zen-address-container {
+  display: flex;
+  align-items: center;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 0.4rem 1rem;
+  flex: 1;
+  transition: all 0.2s ease;
+}
+
+.zen-address-container:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 10px var(--accent-glow);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.zen-address-container.secure {
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.zen-address-container.secure:focus-within {
+  border-color: var(--success-color);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.15);
+}
+
+/* Mac OS Style Window Controls */
+.zen-window-controls-mac {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  z-index: 100000;
+  -webkit-app-region: no-drag;
+}
+
+.zen-window-controls-mac span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-block;
+  transition: opacity 0.2s;
+  opacity: 0.8;
+}
+
+.zen-window-controls-mac span:hover {
+  opacity: 1;
+}
+
+.zen-window-controls-mac .close {
+  background: #ff5f56;
+}
+
+.zen-window-controls-mac .min {
+  background: #ffbd2e;
+}
+
+.zen-window-controls-mac .max {
+  background: #27c93f;
+}

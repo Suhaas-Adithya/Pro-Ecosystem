@@ -1,0 +1,97 @@
+.pro-web-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background-color: #06070a;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+.browser-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #11131a;
+  border-bottom: 1px solid #222533;
+  gap: 16px;
+}
+
+.nav-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-btn, .ext-btn {
+  background: transparent;
+  border: none;
+  color: #a0a0a0;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.nav-btn:hover, .ext-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.url-form {
+  flex: 1;
+  display: flex;
+}
+
+.url-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #1a1d27;
+  border-radius: 20px;
+  padding: 0 16px;
+  border: 1px solid #2a2e40;
+  transition: border-color 0.2s;
+}
+
+.url-input-wrapper:focus-within {
+  border-color: #8b5cf6;
+}
+
+.secure-lock {
+  font-size: 0.9rem;
+  margin-right: 12px;
+  color: #10b981;
+}
+
+.url-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 10px 0;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.loading-spinner {
+  color: #8b5cf6;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+.browser-viewport {
+  flex: 1;
+  position: relative;
+  background: #ffffff;
+}
+
+.web-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #ffffff;
+}

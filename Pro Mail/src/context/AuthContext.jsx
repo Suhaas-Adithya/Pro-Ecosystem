@@ -59,14 +59,48 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    const unsubscribe = firebaseAuth.onAuthStateChanged(async user => {
-      if (user) {
-        await ensureKeysExist(user);
+    let isMounted = true;
+    
+    // Attempt silent SSO from Ecosystem Backend
+    const attemptSSO = async () => {
+      try {
+        const res = await fetch('http://localhost:3001/api/profile?uid=global_device');
+        if (res.ok) {
+          const data = await res.json();
+          const { email, password } = data.profile;
+          if (email && password && !firebaseAuth.currentUser) {
+            try {
+              // Try logging in first
+              await signInEmail(email, password);
+            } catch (loginErr) {
+              // If account doesn't exist, sign up
+              try {
+                await signUpEmail(email, password);
+              } catch (signupErr) {
+                console.warn("SSO Silent Signup Failed:", signupErr);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("SSO backend not reachable or profile missing:", err.message);
       }
-      setCurrentUser(user);
-      setLoading(false);
+    };
+
+    attemptSSO().finally(() => {
+      const unsubscribe = firebaseAuth.onAuthStateChanged(async user => {
+        if (user) {
+          await ensureKeysExist(user);
+        }
+        if (isMounted) {
+          setCurrentUser(user);
+          setLoading(false);
+        }
+      });
+      return unsubscribe;
     });
-    return unsubscribe;
+
+    return () => { isMounted = false; };
   }, []);
 
   const addAlias = async (newAlias) => {
