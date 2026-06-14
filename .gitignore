@@ -42,3 +42,4 @@ pnpm-debug.log*
 *.db
 backend/*.json
 backend/uploads/
+Pro Meet/backend/recordings/
